@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">شعار مصاريفي</title>
+  <desc id="desc">لمبة مضيئة تحيط بها أوراق نقدية</desc>
+  <rect width="512" height="512" rx="96" fill="#fff"/>
+  <g fill="#d8f27a" stroke="#172a2b" stroke-width="10" stroke-linejoin="round">
+    <path d="M92 142 188 94l28 70-91 45z" transform="rotate(-18 140 151)"/>
+    <path d="M318 70 427 93l-15 75-108-24z" transform="rotate(13 363 118)"/>
+    <path d="M66 245 176 227l8 73-109 18z" transform="rotate(-8 120 263)"/>
+    <path d="M344 211 458 235l-18 73-112-27z" transform="rotate(8 389 249)"/>
+    <path d="M94 363 200 339l22 73-107 23z" transform="rotate(15 154 374)"/>
+    <path d="M321 356 426 329l27 70-105 31z" transform="rotate(-14 377 365)"/>
+  </g>
+  <g fill="none" stroke="#172a2b" stroke-width="8" stroke-linecap="round">
+    <path d="m116 140 30-9m-17 26 29-8M343 107l35 7m-31 16 30 7M91 263l33-5m-28 25 32-5M365 251l34 7m-31 16 31 7M127 379l34-8m-22 26 30-8M354 367l33-9m-25 27 30-8"/>
+  </g>
+  <path d="M256 116c-76 0-124 68-101 132 8 22 24 37 42 54 16 15 25 28 28 49h62c3-21 12-34 28-49 18-17 34-32 42-54 23-64-25-132-101-132z" fill="#ffe56e" stroke="#172a2b" stroke-width="12"/>
+  <path d="M210 351h92v20c0 17-14 31-31 31h-30c-17 0-31-14-31-31z" fill="#f6f6f1" stroke="#172a2b" stroke-width="11"/>
+  <path d="M220 402h72M225 424h62M235 445h42" fill="none" stroke="#172a2b" stroke-width="11" stroke-linecap="round"/>
+  <path d="M223 213c14-25 39-39 66-36" fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" opacity=".9"/>
+  <path d="M256 262v89m-35-49 35 35 35-35" fill="none" stroke="#172a2b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

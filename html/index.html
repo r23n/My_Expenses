@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#173a3a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="مصاريفي" />
+  <meta name="description" content="مصاريفي، نظام واضح لمتابعة مصاريفك اليومية" />
+  <title>مصاريفي | مصاريفي اليومية</title>
+  <link rel="icon" href="../assets/logo.svg?v=2" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="../assets/logo.svg?v=2" />
+  <link rel="manifest" href="../manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/reset.css?v=2" />
+  <link rel="stylesheet" href="../css/layout.css?v=2" />
+  <link rel="stylesheet" href="../css/components.css?v=2" />
+</head>
+<body class="app-locked">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=2" alt="" /><div><strong>مصاريفي</strong><span>مصاريفك بوضوح</span></div></div>
+      <nav class="side-nav" aria-label="التنقل الرئيسي">
+        <a class="nav-item active" href="#dashboard"><span>⌂</span>نظرة عامة</a>
+        <a class="nav-item" href="#transactions"><span>↙</span>المصروفات</a>
+        <a class="nav-item" href="#insights"><span>▥</span>التحليلات</a>
+      </nav>
+      <button class="sidebar-settings" id="settingsButton" type="button"><span class="sidebar-settings-icon">⚙</span><span id="settingsLabel">الإعدادات</span></button><div class="cloud-status" id="cloudStatus">محفوظ على هذا الجهاز</div><button class="sidebar-account" id="authButton" type="button">تسجيل الدخول للمزامنة</button><div class="sidebar-footer" id="sidebarFooter">بياناتك محفوظة على جهازك</div>
+    </aside>
+    <div class="mobile-menu-backdrop" id="mobileMenuBackdrop" hidden></div>
+
+    <main class="main-content" id="dashboard">
+      <header class="topbar">
+        <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-label="فتح القائمة"><span></span><span></span><span></span></button>
+        <div><p class="eyebrow" id="todayLabel"></p><h1><span id="greetingIntro">صباحك أوضح،</span></h1></div>
+        <button class="primary-button" id="openModal" type="button"><span>＋</span> <span id="addExpenseLabel">إضافة مصروف</span></button>
+      </header>
+
+      <section class="month-strip" aria-label="الشهر الحالي">
+        <div><span class="strip-label" id="trackingLabel">تتابع الآن</span><strong id="monthName"></strong></div>
+        <div class="month-progress"><div class="progress-copy"><span id="monthlyBudgetLabel">ميزانية الشهر</span><strong id="budgetLabel"></strong></div><div class="progress-track"><div class="progress-value" id="budgetProgress"></div></div></div>
+        <button class="text-button" id="editBudget" type="button"><span id="budgetActionLabel">تحديد الميزانية</span> <span>←</span></button>
+      </section>
+
+      <section class="stats-grid" aria-label="ملخص المصاريف">
+        <article class="stat-card main-stat"><div class="stat-top"><span id="totalSpentLabel">إجمالي المصروف</span><span class="stat-icon coral">↘</span></div><strong id="totalSpent"></strong><p id="spentCaption"></p></article>
+        <article class="stat-card"><div class="stat-top"><span id="remainingLabel">المتبقي من الميزانية</span><span class="stat-icon mint">✓</span></div><strong id="remainingBudget"></strong><p id="remainingCaption"></p></article>
+        <article class="stat-card"><div class="stat-top"><span id="dailyAverageLabel">متوسط الصرف اليومي</span><span class="stat-icon yellow">≈</span></div><strong id="dailyAverage"></strong><p id="daysRecordedLabel">خلال الأيام المسجلة</p></article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel chart-panel" id="insights"><div class="panel-heading"><div><span class="section-kicker">إيقاع الصرف</span><h2>مصروفات الأسبوع</h2></div><div class="week-controls"><button class="week-button" id="previousWeek" type="button" aria-label="الأسبوع السابق">→</button><span class="period-label" id="weekLabel">هذا الأسبوع</span><button class="week-button" id="nextWeek" type="button" aria-label="الأسبوع التالي">←</button></div></div><div class="chart-area" id="weeklyChart"></div><div class="chart-days" id="chartDays"></div></article>
+        <article class="panel category-panel"><div class="panel-heading"><div><span class="section-kicker">توزيع الإنفاق</span><h2>أين تذهب فلوسك؟</h2></div><span class="donut-total" id="donutTotal"></span></div><div class="category-content"><div class="donut-chart" id="donutChart"><div><strong id="donutCenter"></strong><span>د.ب</span></div></div><div class="category-list" id="categoryList"></div></div></article>
+      </section>
+
+      <section class="report-grid" aria-label="تقرير الشهر"><article class="report-card"><span class="section-kicker">تقرير الشهر</span><h2>أعلى تصنيف صرف</h2><strong id="topCategory">لا توجد بيانات</strong><p id="topCategoryAmount">أضف مصروفات لتظهر النتيجة</p></article><article class="report-card"><span class="section-kicker">تقرير الشهر</span><h2>أعلى يوم صرف</h2><strong id="topSpendingDay">لا توجد بيانات</strong><p id="topSpendingDayAmount">أضف مصروفات لتظهر النتيجة</p></article></section>
+
+      <section class="panel transactions-panel" id="transactions"><div class="panel-heading transactions-heading"><div><span class="section-kicker">سجل نشاطك</span><h2>آخر المصروفات</h2></div><button class="text-button" id="showAll" type="button">عرض الكل <span>←</span></button></div><div class="filters"><label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="ابحث في المصروفات..." /></label><label class="month-filter"><span id="monthFilterLabel">الشهر</span><input id="monthFilter" type="month" /></label><select id="categoryFilter" aria-label="تصفية حسب التصنيف"><option value="all">كل التصنيفات</option><option value="طعام">طعام ومشروبات</option><option value="مواصلات">مواصلات</option><option value="تسوق">تسوق</option><option value="فواتير">فواتير</option><option value="ترفيه">ترفيه</option><option value="أخرى">أخرى</option></select></div><div class="transaction-list" id="transactionList"></div><div class="empty-state" id="emptyState"><div>◌</div><h3>لا توجد مصروفات هنا</h3><p>أضف أول مصروف وابدأ تتابع عاداتك المالية.</p><button class="secondary-button" id="emptyAdd" type="button">إضافة مصروف</button></div></section>
+    </main>
+  </div>
+
+  <div class="auth-gate" id="authGate"><section class="auth-gate-card"><img class="auth-gate-logo" src="../assets/logo.svg?v=2" alt="" /><span class="section-kicker" id="gateKicker">مصاريفي</span><h2 id="gateTitle">سجّل دخولك للمتابعة</h2><p id="gateMessage">يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.</p><button class="primary-button full-width" id="gateAuthButton" type="button">تسجيل الدخول</button></section></div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="close-button" id="closeModal" type="button" aria-label="إغلاق">×</button><span class="section-kicker" id="expenseModalKicker">مصروف جديد</span><h2 id="modalTitle">سجّل عملية صرف</h2><p class="modal-intro">أنت تتحكم بالمبلغ والتصنيف والتاريخ.</p><form id="expenseForm"><label><span id="amountLabel">المبلغ</span><div class="amount-input"><input name="amount" type="number" min="0.001" step="0.001" placeholder="0.000" required /><span>د.ب</span></div></label><label><span id="expenseTypeLabel">نوع الصرف</span><select name="category" id="categoryInput" required><option value="طعام">طعام ومشروبات</option><option value="مواصلات">مواصلات</option><option value="تسوق">تسوق</option><option value="فواتير">فواتير</option><option value="ترفيه">ترفيه</option><option value="أخرى">أخرى</option><option value="مخصص">نوع مخصص...</option></select></label><label class="custom-category" id="customCategoryField" hidden><span id="customTypeLabel">اكتب نوع الصرف</span><input name="customCategory" id="customCategoryInput" type="text" maxlength="30" placeholder="مثال: اشتراك رياضي" /></label><label><span id="descriptionLabel">وصف مختصر</span><input name="description" type="text" maxlength="50" placeholder="مثال: قهوة الصباح" required /></label><label><span id="dateLabel">التاريخ</span><input name="date" type="date" required /></label><button class="primary-button full-width" type="submit"><span id="expenseSubmitLabel">حفظ المصروف</span> <span>✓</span></button></form></section></div>
+  <div class="modal-backdrop" id="budgetModalBackdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle"><button class="close-button" id="closeBudgetModal" type="button" aria-label="إغلاق">×</button><span class="section-kicker" id="budgetKicker">ميزانيتك الشهرية</span><h2 id="budgetModalTitle">حدد المبلغ الذي يناسبك</h2><p class="modal-intro" id="budgetModalNote">يمكنك تغييره في أي وقت، ولا يوجد مبلغ افتراضي مفروض عليك.</p><form id="budgetForm"><label><span id="budgetInputLabel">الميزانية الشهرية</span><div class="amount-input"><input name="budget" id="budgetInput" type="number" min="0.001" step="0.001" placeholder="0.000" required /><span>د.ب</span></div></label><button class="primary-button full-width" type="submit"><span id="budgetSubmitLabel">حفظ الميزانية</span> <span>✓</span></button></form></section></div>
+  <div class="modal-backdrop" id="authModalBackdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle"><button class="close-button" id="closeAuthModal" type="button" aria-label="إغلاق">×</button><span class="section-kicker" id="secureSyncLabel">مزامنة آمنة</span><h2 id="authModalTitle">سجّل دخولك</h2><p class="modal-intro" id="authModalNote">استخدم نفس الحساب على الجوال والكمبيوتر.</p><form id="authForm"><label><span id="emailLabel">البريد الإلكتروني</span><input name="email" type="email" autocomplete="email" required placeholder="name@example.com" /></label><label><span id="passwordLabel">كلمة المرور</span><input name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="••••••••" /></label><p class="form-message" id="authMessage" role="status"></p><button class="primary-button full-width" id="authSubmit" type="submit">تسجيل الدخول</button><button class="secondary-button full-width" id="signUpButton" type="button">إنشاء حساب جديد</button></form></section></div>
+  <div class="modal-backdrop" id="settingsModalBackdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><button class="close-button" id="closeSettings" type="button" aria-label="إغلاق">×</button><span class="section-kicker" id="settingsKicker">إعدادات المستخدم</span><h2 id="settingsTitle">إعدادات المستخدم</h2><p class="modal-intro" id="settingsNote">خصص طريقة ظهور النظام لك.</p><form id="settingsForm"><label><span id="displayNameLabel">اسم المستخدم</span><input name="displayName" id="displayNameInput" type="text" maxlength="40" placeholder="Example: Ahmed" /></label><label><span id="languageLabel">اللغة</span><select name="language" id="languageInput"><option value="ar">العربية</option><option value="en">English</option></select></label><button class="primary-button full-width" type="submit"><span id="settingsSubmitLabel">حفظ الإعدادات</span> <span>✓</span></button></form></section></div>
+  <script type="module" src="../js/app.js"></script>
+</body>
+</html>

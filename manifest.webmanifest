@@ -1,0 +1,20 @@
+{
+  "name": "مصاريفي",
+  "short_name": "مصاريفي",
+  "description": "متابعة المصاريف اليومية بالدينار البحريني",
+  "start_url": "/html/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f6",
+  "theme_color": "#173a3a",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/assets/logo.svg?v=2",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
