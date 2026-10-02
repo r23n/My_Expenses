@@ -52,3 +52,10 @@ export async function saveCloudData(userId, expenses, budget) {
     if (expensesResult.error) throw expensesResult.error;
   }
 }
+
+// الحفظ يرفع المصاريف الموجودة بس، فالمحذوف لازم ينحذف من السحابة بطلب خاص، وإلا يرجع يطلع بعد تسجيل الدخول
+export async function deleteCloudExpense(userId, expenseId) {
+  if (!supabase) return;
+  const { error } = await supabase.from('expenses').delete().eq('id', expenseId).eq('user_id', userId);
+  if (error) throw error;
+}
