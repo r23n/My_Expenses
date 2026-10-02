@@ -1,6 +1,6 @@
 import { clearLocalData, emptyPending, loadBudgets, loadExpenses, loadLegacyBudget, loadPending, loadRecurring, saveBudgets, saveExpenses, savePending, saveRecurring } from './storage.js';
 import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, updateCategories, updateChart, updateComparison, updateRecurringList, updateReports, updateSummary, updateTransactions } from './ui.js';
-import { applyTranslations, checkTranslations, getDisplayName, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
+import { applyTranslations, checkTranslations, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
 
 // القيم هذي تنحفظ بالعربي في قاعدة البيانات، فلا نغيرها حتى لو الواجهة إنجليزي
 const STANDARD_CATEGORIES = ['طعام', 'مواصلات', 'تسوق', 'فواتير', 'ترفيه', 'أخرى'];
@@ -173,7 +173,7 @@ async function pushChanges() {
     const changedExpenses = expenses.filter(item => upsertIds.includes(item.id));
     await cloudApi.upsertCloudExpenses(userId, changedExpenses);
     await cloudApi.deleteCloudExpenses(userId, deleteIds);
-    if (profileChanged) await cloudApi.saveCloudProfile(userId, budgets, recurring);
+    if (profileChanged) await cloudApi.saveCloudProfile(userId, budgets, recurring, getEnglishDisplayName());
     pending.upserts = pending.upserts.filter(id => !upsertIds.includes(id));
     pending.deletes = pending.deletes.filter(id => !deleteIds.includes(id));
     if (profileChanged) pending.profile = false;
@@ -209,6 +209,8 @@ async function pullFromCloud(firstTime = false) {
       saveBudgets(budgets);
       saveRecurring(recurring);
       if (moveLegacyBudget(cloudData.legacyBudget)) markProfileChanged();
+      saveEnglishDisplayName(cloudData.displayName);
+      updateGreeting();
     }
     addDueRecurring();
     await pushChanges();
@@ -281,7 +283,7 @@ function render() {
 }
 
 function updateGreeting() {
-  const name = getEnglishDisplayName() || getDisplayName();
+  const name = getEnglishDisplayName();
   const comma = getLanguage() === 'en' ? ', ' : '، ';
   document.querySelector('#greetingIntro').textContent = name ? `${t('hello')}${comma}${name}` : t('hello');
 }
@@ -429,7 +431,7 @@ function closeBudgetModal() {
 }
 
 function openSettings() {
-  document.querySelector('#displayNameInput').value = getEnglishDisplayName() || getDisplayName();
+  document.querySelector('#displayNameInput').value = getEnglishDisplayName();
   document.querySelector('#languageInput').value = getLanguage();
   updateRecurringList(recurring);
   document.querySelector('#settingsModalBackdrop').hidden = false;
@@ -473,6 +475,9 @@ async function signOutUser() {
   budgets = {};
   recurring = [];
   pending = emptyPending();
+  saveEnglishDisplayName('');
+  localStorage.removeItem('sarfati-display-name');
+  updateGreeting();
   setKey('#authButton', 'signInSync');
   setCloudStatus('syncReady');
   closeMobileMenu();
@@ -656,7 +661,8 @@ document.querySelector('#languageInput').addEventListener('change', event => {
 });
 document.querySelector('#settingsForm').addEventListener('submit', event => {
   event.preventDefault();
-  saveEnglishDisplayName(document.querySelector('#displayNameInput').value);
+  markProfileChanged();
+  pushChanges();
   saveLanguage(document.querySelector('#languageInput').value);
   applyLanguage();
   render();

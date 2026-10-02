@@ -36,7 +36,7 @@ export async function loadCloudData(userId) {
   if (!supabase) return null;
   const [expensesResult, profileResult] = await Promise.all([
     supabase.from('expenses').select('*').eq('user_id', userId).order('expense_date', { ascending: false }),
-    supabase.from('profiles').select('budget, budgets, recurring').eq('id', userId).maybeSingle()
+    supabase.from('profiles').select('budget, budgets, recurring, display_name').eq('id', userId).maybeSingle()
   ]);
   if (expensesResult.error) throw expensesResult.error;
   if (profileResult.error) {
@@ -49,7 +49,8 @@ export async function loadCloudData(userId) {
     expenses: expensesResult.data.map(item => ({ id: item.id, amount: Number(item.amount), category: item.category, description: item.description, date: item.expense_date, createdAt: new Date(item.created_at).getTime() })),
     budgets: profile.budgets || {},
     recurring: profile.recurring || [],
-    legacyBudget: Number(profile.budget || 0)
+        legacyBudget: Number(profile.budget || 0),
+    displayName: profile.display_name || ''
   };
 }
 
@@ -67,8 +68,8 @@ export async function deleteCloudExpenses(userId, ids) {
   if (error) throw error;
 }
 
-export async function saveCloudProfile(userId, budgets, recurring) {
+export async function saveCloudProfile(userId, budgets, recurring, displayName) {
   if (!supabase) return;
-  const { error } = await supabase.from('profiles').upsert({ id: userId, budgets, recurring }, { onConflict: 'id' });
+  const { error } = await supabase.from('profiles').upsert({ id: userId, budgets, recurring, display_name: displayName }, { onConflict: 'id' });
   if (error) throw error;
 }
