@@ -111,3 +111,18 @@ form label.repeat-field input { width: 16px; height: 16px; margin: 0; padding: 0
 .toast { position: fixed; inset-inline: 0; bottom: 22px; z-index: 40; width: max-content; max-width: calc(100% - 32px); margin: 0 auto; display: flex; align-items: center; gap: 16px; padding: 11px 16px; border-radius: 8px; background: var(--teal-deep); color: #fff; box-shadow: 0 10px 30px #0c292f40; font-size: 12px; }
 .toast[hidden] { display: none; }
 .toast button { padding: 4px 8px; border: 0; background: transparent; color: #f9c4b9; font-size: 12px; font-weight: 700; }
+.progress-value.warning { background: #e3b341; }
+.progress-value.danger { background: var(--coral); }
+.stat-card p.warning { color: #c08a1e; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+button, .nav-item, .install-step { -webkit-user-select: none; user-select: none; }
+.install-open { margin-top: 14px; }
+.install-head { display: flex; align-items: flex-start; gap: 14px; padding-inline-end: 30px; }
+.install-head h2 { margin: 0 0 6px; }
+.install-logo { width: 58px; height: 58px; flex-shrink: 0; border-radius: 14px; box-shadow: 0 4px 14px #173a3a26; }
+.install-steps { display: grid; gap: 10px; margin: 20px 0 14px; }
+.install-step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: #f7faf9; color: var(--ink); font-size: 13px; }
+.install-number { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--teal-deep); color: #fff; font-size: 13px; font-weight: 700; }
+.install-icon { min-width: 42px; height: 42px; padding: 0 8px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--teal-deep); font-size: 13px; font-weight: 700; }
+.install-later { width: 100%; margin-top: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: #f7faf9; color: var(--ink); font-size: 13px; }

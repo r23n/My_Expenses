@@ -1,11 +1,13 @@
 export const STORAGE_KEYS = {
   expenses: 'sarfati-expenses-v2',
-  budget: 'sarfati-budget-v2'
+  budget: 'sarfati-budget-v2',
+  budgets: 'sarfati-budgets-v1',
+  recurring: 'sarfati-recurring-v1',
+  pending: 'sarfati-pending-v1'
 };
 
 export const DEFAULT_BUDGET = 0;
 export const CURRENCY = 'BHD';
-export const CURRENCY_LABEL = 'د.ب';
 
 export const CATEGORY_COLORS = {
   طعام: '#de6c5b',

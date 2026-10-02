@@ -28,34 +28,47 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+function toRow(userId, item) {
+  return { id: item.id, user_id: userId, amount: item.amount, category: item.category, description: item.description, expense_date: item.date, created_at: new Date(item.createdAt || Date.now()).toISOString() };
+}
+
 export async function loadCloudData(userId) {
   if (!supabase) return null;
   const [expensesResult, profileResult] = await Promise.all([
     supabase.from('expenses').select('*').eq('user_id', userId).order('expense_date', { ascending: false }),
-    supabase.from('profiles').select('budget').eq('id', userId).maybeSingle()
+    supabase.from('profiles').select('budget, budgets, recurring').eq('id', userId).maybeSingle()
   ]);
   if (expensesResult.error) throw expensesResult.error;
-  if (profileResult.error) throw profileResult.error;
+  if (profileResult.error) {
+    // نطبع الرد كامل عشان لو نسيت تشغّل ملف SQL الجديد يبان السبب بوضوح في الـ Console
+    console.error('profiles error (did you run supabase_update_v4.sql?)', profileResult.error);
+    throw profileResult.error;
+  }
+  const profile = profileResult.data || {};
   return {
     expenses: expensesResult.data.map(item => ({ id: item.id, amount: Number(item.amount), category: item.category, description: item.description, date: item.expense_date, createdAt: new Date(item.created_at).getTime() })),
-    budget: Number(profileResult.data?.budget || 0)
+    budgets: profile.budgets || {},
+    recurring: profile.recurring || [],
+    legacyBudget: Number(profile.budget || 0)
   };
 }
 
-export async function saveCloudData(userId, expenses, budget) {
-  if (!supabase) return;
-  const profileResult = await supabase.from('profiles').upsert({ id: userId, budget }, { onConflict: 'id' });
-  if (profileResult.error) throw profileResult.error;
-  const rows = expenses.map(item => ({ id: item.id, user_id: userId, amount: item.amount, category: item.category, description: item.description, expense_date: item.date, created_at: new Date(item.createdAt || Date.now()).toISOString() }));
-  if (rows.length) {
-    const expensesResult = await supabase.from('expenses').upsert(rows, { onConflict: 'id' });
-    if (expensesResult.error) throw expensesResult.error;
-  }
+// نرفع المصاريف اللي تغيرت بس بدل كل القائمة، عشان الحفظ يبقى سريع حتى مع مئات المصاريف
+export async function upsertCloudExpenses(userId, expenses) {
+  if (!supabase || !expenses.length) return;
+  const rows = expenses.map(item => toRow(userId, item));
+  const { error } = await supabase.from('expenses').upsert(rows, { onConflict: 'id' });
+  if (error) throw error;
 }
 
-// الحفظ يرفع المصاريف الموجودة بس، فالمحذوف لازم ينحذف من السحابة بطلب خاص، وإلا يرجع يطلع بعد تسجيل الدخول
-export async function deleteCloudExpense(userId, expenseId) {
+export async function deleteCloudExpenses(userId, ids) {
+  if (!supabase || !ids.length) return;
+  const { error } = await supabase.from('expenses').delete().in('id', ids).eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function saveCloudProfile(userId, budgets, recurring) {
   if (!supabase) return;
-  const { error } = await supabase.from('expenses').delete().eq('id', expenseId).eq('user_id', userId);
+  const { error } = await supabase.from('profiles').upsert({ id: userId, budgets, recurring }, { onConflict: 'id' });
   if (error) throw error;
 }

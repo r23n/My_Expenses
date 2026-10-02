@@ -2,29 +2,30 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#173a3a" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="مصاريفي" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="مصاريفي، نظام واضح لمتابعة مصاريفك اليومية" />
   <title>مصاريفي | مصاريفي اليومية</title>
-  <link rel="icon" href="../assets/logo.svg?v=2" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="../assets/logo.svg?v=2" />
+  <link rel="icon" href="../assets/logo.svg?v=5" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="../assets/icon-180.png" />
   <link rel="manifest" href="../manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- رقم النسخة يتغير مع كل تحديث كبير عشان الجوال ينزل الملفات الجديدة بدل القديمة المحفوظة -->
-  <link rel="stylesheet" href="../css/reset.css?v=3" />
-  <link rel="stylesheet" href="../css/layout.css?v=3" />
-  <link rel="stylesheet" href="../css/components.css?v=3" />
+  <link rel="stylesheet" href="../css/reset.css?v=5" />
+  <link rel="stylesheet" href="../css/layout.css?v=5" />
+  <link rel="stylesheet" href="../css/components.css?v=5" />
 </head>
 <!-- أي عنصر عليه data-i18n تترجمه الدالة applyTranslations تلقائيًا، والنص العربي هنا يظهر بس لحظة التحميل -->
 <body class="app-locked">
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=2" alt="" /><div><strong data-i18n="appName">مصاريفي</strong><span data-i18n="brandTagline">مصاريفك بوضوح</span></div></div>
+      <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=5" alt="" /><div><strong data-i18n="appName">مصاريفي</strong><span data-i18n="brandTagline">مصاريفك بوضوح</span></div></div>
       <nav class="side-nav" data-i18n-aria="mainNav" aria-label="التنقل الرئيسي">
         <a class="nav-item active" href="#dashboard"><span>⌂</span><span data-i18n="overview">نظرة عامة</span></a>
         <a class="nav-item" href="#transactions"><span>↙</span><span data-i18n="expenses">المصروفات</span></a>
@@ -102,7 +103,7 @@
     </main>
   </div>
 
-  <div class="auth-gate" id="authGate"><section class="auth-gate-card"><img class="auth-gate-logo" src="../assets/logo.svg?v=2" alt="" /><span class="section-kicker" data-i18n="appName">مصاريفي</span><h2 data-i18n="gateTitle">سجّل دخولك للمتابعة</h2><p data-i18n="gateMessage">يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.</p><button class="primary-button full-width" id="gateAuthButton" type="button" data-i18n="signIn">تسجيل الدخول</button></section></div>
+  <div class="auth-gate" id="authGate"><section class="auth-gate-card"><img class="auth-gate-logo" src="../assets/logo.svg?v=5" alt="" /><span class="section-kicker" data-i18n="appName">مصاريفي</span><h2 data-i18n="gateTitle">سجّل دخولك للمتابعة</h2><p data-i18n="gateMessage">يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.</p><button class="primary-button full-width" id="gateAuthButton" type="button" data-i18n="signIn">تسجيل الدخول</button></section></div>
 
   <div class="modal-backdrop" id="modalBackdrop" hidden>
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -173,10 +174,20 @@
         <label><span data-i18n="language">اللغة</span><select name="language" id="languageInput"><option value="ar">العربية</option><option value="en">English</option></select></label>
         <button class="primary-button full-width" type="submit"><span data-i18n="saveSettings">حفظ الإعدادات</span> <span>✓</span></button>
       </form>
+      <button class="secondary-button full-width install-open" id="openInstallGuide" type="button" data-i18n="addToHomeScreen">أضف التطبيق للشاشة الرئيسية</button>
       <div class="recurring-section"><h3 data-i18n="recurringTitle">المصاريف المتكررة</h3><div id="recurringList"></div></div>
     </section>
   </div>
+    <div class="modal-backdrop" id="installModalBackdrop" hidden>
+    <section class="modal install-modal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+      <button class="close-button" id="closeInstall" type="button" data-i18n-aria="close" aria-label="إغلاق">×</button>
+      <div class="install-head"><img class="install-logo" src="../assets/icon-180.png" alt="" /><div><h2 id="installTitle" data-i18n="installTitle">أضِف إلى شاشتك الرئيسية</h2><p class="modal-intro" id="installIntro" data-i18n="installIntroIos">اضغط على زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية».</p></div></div>
+      <div class="install-steps" id="installSteps"></div>
+      <button class="primary-button full-width" id="installNowButton" type="button" data-i18n="installNow" hidden>ثبّت التطبيق الآن</button>
+      <button class="install-later" id="installLater" type="button" data-i18n="notNow">ليس الآن</button>
+    </section>
+  </div>
     <div class="toast" id="undoToast" role="status" hidden><span data-i18n="expenseDeleted">انحذف المصروف</span><button id="undoButton" type="button" data-i18n="undo">تراجع</button></div>
-  <script type="module" src="../js/app.js?v=3"></script>
+  <script type="module" src="../js/app.js?v=5"></script>
 </body>
 </html>

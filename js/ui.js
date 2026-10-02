@@ -33,22 +33,37 @@ export function formatWeekRange(start, end) {
   return `${rangeFormat.format(start)} - ${rangeFormat.format(end)}`;
 }
 
-export function updateSummary(expenses, budget) {
+export function updateSummary(expenses, budget, daysLeft = 0) {
   const total = expenses.reduce((sum, item) => sum + item.amount, 0);
   const remaining = budget - total;
   const days = new Set(expenses.map(item => item.date)).size;
+  const percent = budget > 0 ? total / budget * 100 : 0;
+  const caption = document.querySelector('#remainingCaption');
+  const progress = document.querySelector('#budgetProgress');
   document.querySelector('#totalSpent').textContent = money(total);
   document.querySelector('#remainingBudget').textContent = money(Math.max(remaining, 0));
-  document.querySelector('#remainingCaption').textContent = remaining >= 0 ? t('inPlan') : t('overBudget');
-  document.querySelector('#remainingCaption').classList.toggle('positive', remaining >= 0);
   document.querySelector('#spentCaption').textContent = total ? `${expenses.length} ${t('transactionsCount')}` : t('firstExpense');
   document.querySelector('#budgetLabel').textContent = money(budget);
-  document.querySelector('#budgetProgress').style.width = budget > 0 ? `${Math.min(total / budget * 100, 100)}%` : '0%';
+  progress.style.width = budget > 0 ? `${Math.min(percent, 100)}%` : '0%';
+  // الشريط يتلون حسب قربك من نهاية الميزانية: أصفر من ٨٠٪ وأحمر عند التجاوز
+  progress.classList.toggle('warning', percent >= 80 && percent < 100);
+  progress.classList.toggle('danger', percent >= 100);
+  caption.classList.remove('positive', 'warning');
+  if (budget === 0) {
+    caption.textContent = t('setBudgetFirst');
+  } else if (remaining < 0) {
+    caption.textContent = t('overBudget');
+  } else if (daysLeft > 0) {
+    // في الشهر الحالي نوضح كم تقدر تصرف باليوم عشان توصل آخر الشهر بدون تجاوز
+    caption.textContent = `${money(remaining / daysLeft)} ${t('perDayLeft')}`;
+    caption.classList.add(percent >= 80 ? 'warning' : 'positive');
+  } else {
+    caption.textContent = t('inPlan');
+    caption.classList.add('positive');
+  }
   const budgetAction = document.querySelector('#budgetActionLabel');
-  // نحدث مفتاح الترجمة نفسه عشان لو تغيرت اللغة يبقى نفس المعنى
   budgetAction.dataset.i18n = budget > 0 ? 'editBudget' : 'setBudget';
   budgetAction.textContent = t(budgetAction.dataset.i18n);
-  if (budget === 0) document.querySelector('#remainingCaption').textContent = t('setBudgetFirst');
   document.querySelector('#dailyAverage').textContent = money(days ? total / days : 0);
 }
 
