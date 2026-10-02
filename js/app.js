@@ -114,7 +114,7 @@ async function finishCloudSignIn(session) {
     await syncCloud();
   }
   setCloudStatus(getLanguage() === 'en' ? `Synced: ${session.user.email}` : `متزامن: ${session.user.email}`);
-  document.querySelector('#authButton').textContent = 'تسجيل الخروج';
+  document.querySelector('#authButton').textContent = t('signOut');
   setAppLocked(false);
   render();
 }
@@ -269,7 +269,7 @@ document.querySelector('#closeModal').addEventListener('click', closeModal);
 document.querySelector('#modalBackdrop').addEventListener('click', event => { if (event.target.id === 'modalBackdrop') closeModal(); });
 document.querySelector('#closeBudgetModal').addEventListener('click', closeBudgetModal);
 document.querySelector('#budgetModalBackdrop').addEventListener('click', event => { if (event.target.id === 'budgetModalBackdrop') closeBudgetModal(); });
-document.querySelector('#settingsButton').addEventListener('click', openSettings);
+document.querySelector('#settingsButton').addEventListener('click', () => { closeMobileMenu(); openSettings(); });
 document.querySelector('#closeSettings').addEventListener('click', closeSettings);
 document.querySelector('#settingsModalBackdrop').addEventListener('click', event => { if (event.target.id === 'settingsModalBackdrop') closeSettings(); });
 document.querySelector('#settingsForm').addEventListener('submit', event => { event.preventDefault(); const form = new FormData(event.target); saveEnglishDisplayName(form.get('displayName')); saveLanguage(form.get('language')); applyLanguage(); render(); closeSettings(); });
