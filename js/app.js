@@ -661,6 +661,7 @@ document.querySelector('#languageInput').addEventListener('change', event => {
 });
 document.querySelector('#settingsForm').addEventListener('submit', event => {
   event.preventDefault();
+  saveEnglishDisplayName(document.querySelector('#displayNameInput').value);
   markProfileChanged();
   pushChanges();
   saveLanguage(document.querySelector('#languageInput').value);
