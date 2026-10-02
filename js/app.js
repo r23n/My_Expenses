@@ -263,8 +263,8 @@ function refreshDateTime() {
 applyLanguage();
 refreshDateTime();
 setInterval(refreshDateTime, 60000);
-document.querySelector('#openModal').addEventListener('click', openModal);
-document.querySelector('#emptyAdd').addEventListener('click', openModal);
+document.querySelector('#openModal').addEventListener('click', () => openModal());
+document.querySelector('#emptyAdd').addEventListener('click', () => openModal());
 document.querySelector('#closeModal').addEventListener('click', closeModal);
 document.querySelector('#modalBackdrop').addEventListener('click', event => { if (event.target.id === 'modalBackdrop') closeModal(); });
 document.querySelector('#closeBudgetModal').addEventListener('click', closeBudgetModal);
