@@ -521,6 +521,7 @@ let deferredInstallPrompt = null;
 
 const SHARE_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 const PLUS_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>';
+const DESKTOP_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 7v6"/><path d="M9 10l3 3 3-3"/></svg>';
 const MENU_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 
 function isStandalone() {
@@ -537,15 +538,20 @@ function isAndroid() {
 }
 
 function openInstallGuide() {
-  const ios = isIos();
   let steps;
-  if (ios) {
+  let introKey;
+  if (isIos()) {
     steps = [[SHARE_ICON, 'iosStep1'], [PLUS_ICON, 'iosStep2'], ['Add', 'iosStep3']];
-  } else {
+    introKey = 'installIntroIos';
+  } else if (isAndroid()) {
     steps = [[MENU_ICON, 'androidStep1'], [PLUS_ICON, 'androidStep2'], ['Install', 'androidStep3']];
+    introKey = 'installIntroAndroid';
+  } else {
+    steps = [[DESKTOP_ICON, 'desktopStep1'], ['Install', 'desktopStep2']];
+    introKey = 'installIntroDesktop';
   }
   document.querySelector('#installSteps').innerHTML = steps.map((step, index) => `<div class="install-step"><span class="install-number">${index + 1}</span><span class="install-icon">${step[0]}</span><span>${t(step[1])}</span></div>`).join('');
-  setKey('#installIntro', ios ? 'installIntroIos' : 'installIntroAndroid');
+  setKey('#installIntro', introKey);
   // أندرويد كروم يقدر يثبت بضغطة وحدة، فنظهر الزر بس لما المتصفح يسمح
   document.querySelector('#installNowButton').hidden = !deferredInstallPrompt;
   document.querySelector('#installModalBackdrop').hidden = false;
@@ -559,7 +565,6 @@ function showInstallGuideOnce(userId) {
   // نعرضها مرة وحدة لكل حساب على كل جهاز، وبس لو فاتح من متصفح جوال مو من التطبيق المثبت
   const key = `sarfati-install-guide-${userId}`;
   if (isStandalone() || localStorage.getItem(key)) return;
-  if (!isIos() && !isAndroid()) return;
   localStorage.setItem(key, 'shown');
   openInstallGuide();
 }
@@ -567,6 +572,7 @@ function showInstallGuideOnce(userId) {
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
   deferredInstallPrompt = event;
+   if (!document.querySelector('#installModalBackdrop').hidden) document.querySelector('#installNowButton').hidden = false;
 });
 
 document.querySelector('#installNowButton').addEventListener('click', async () => {
@@ -642,6 +648,12 @@ document.querySelector('#settingsButton').addEventListener('click', () => {
 });
 document.querySelector('#closeSettings').addEventListener('click', closeSettings);
 document.querySelector('#settingsModalBackdrop').addEventListener('click', event => { if (event.target.id === 'settingsModalBackdrop') closeSettings(); });
+document.querySelector('#languageInput').addEventListener('change', event => {
+  saveLanguage(event.target.value);
+  applyLanguage();
+  updateRecurringList(recurring);
+  render();
+});
 document.querySelector('#settingsForm').addEventListener('submit', event => {
   event.preventDefault();
   saveEnglishDisplayName(document.querySelector('#displayNameInput').value);

@@ -1,4 +1,3 @@
-// كل نصوص الواجهة هنا في مكان واحد، وأي نص جديد نضيف له سطر بالعربي وسطر بالإنجليزي
 const translations = {
   ar: {
     pageTitle: 'مصاريفي | مصاريفي اليومية',
@@ -84,7 +83,7 @@ const translations = {
     lastMonthTotal: 'الشهر الماضي',
     noLastMonth: 'ما في مصاريف مسجلة للشهر الماضي',
     biggestIncrease: 'أكثر زيادة',
-        perDayLeft: 'باليوم لين آخر الشهر',
+    perDayLeft: 'باليوم لين آخر الشهر',
     installTitle: 'أضِف إلى شاشتك الرئيسية',
     installIntroIos: 'اضغط على زر المشاركة، ثم اختر «إضافة إلى الشاشة الرئيسية».',
     installIntroAndroid: 'افتح قائمة المتصفح، ثم اختر «تثبيت التطبيق».',
@@ -97,6 +96,9 @@ const translations = {
     installNow: 'ثبّت التطبيق الآن',
     notNow: 'ليس الآن',
     addToHomeScreen: 'أضف التطبيق للشاشة الرئيسية',
+    installIntroDesktop: 'اضغط أيقونة التثبيت في شريط العنوان فوق، ثم اختر «تثبيت».',
+    desktopStep1: 'اضغط أيقونة التثبيت في شريط العنوان',
+    desktopStep2: 'اضغط تثبيت',
     gateTitle: 'سجّل دخولك للمتابعة',
     gateMessage: 'يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.',
     signIn: 'تسجيل الدخول',
@@ -224,6 +226,22 @@ const translations = {
     lastMonthTotal: 'Last month',
     noLastMonth: 'No expenses recorded last month',
     biggestIncrease: 'Biggest increase',
+    perDayLeft: 'per day until month end',
+    installTitle: 'Add to your Home Screen',
+    installIntroIos: 'Tap the Share button, then choose "Add to Home Screen".',
+    installIntroAndroid: 'Open the browser menu, then choose "Install app".',
+    iosStep1: 'Tap Share',
+    iosStep2: 'Add to Home Screen',
+    iosStep3: 'Tap Add',
+    androidStep1: 'Tap the menu at the top',
+    androidStep2: 'Install app',
+    androidStep3: 'Tap Install',
+    installNow: 'Install the app now',
+    notNow: 'Not now',
+    addToHomeScreen: 'Add app to Home Screen',
+    installIntroDesktop: 'Click the install icon in the address bar, then choose "Install".',
+    desktopStep1: 'Click the install icon in the address bar',
+    desktopStep2: 'Click Install',
     gateTitle: 'Sign in to continue',
     gateMessage: 'Sign in is required to use the system and keep your expenses secure.',
     signIn: 'Sign in',
@@ -269,7 +287,6 @@ const translations = {
   }
 };
 
-// التصنيفات تنحفظ بالعربي في قاعدة البيانات، فنربط كل قيمة بمفتاح ترجمة عشان تنعرض بلغة المستخدم بدون ما نغير البيانات القديمة
 const CATEGORY_KEYS = {
   طعام: 'catFood',
   مواصلات: 'catTransport',
@@ -306,7 +323,6 @@ export function saveEnglishDisplayName(name) {
 export function t(key, language = getLanguage()) {
   const languageTexts = translations[language] || translations.ar;
   if (languageTexts[key] !== undefined) return languageTexts[key];
-  // لو المفتاح ناقص نرجع العربي بدل ما يطلع undefined للمستخدم، وننبه المطور في الـ Console
   console.warn(`Missing translation: "${key}" (${language})`);
   if (translations.ar[key] !== undefined) return translations.ar[key];
   return key;
@@ -318,12 +334,10 @@ export function currencyLabel() {
 
 export function categoryLabel(category) {
   const key = CATEGORY_KEYS[category];
-  // التصنيف المخصص اللي كتبه المستخدم بنفسه نعرضه زي ما كتبه
   if (!key) return category;
   return t(key);
 }
 
-// تمر على الصفحة كلها وتترجم أي عنصر عليه علامة ترجمة، عشان ما نحتاج نترجم كل عنصر بسطر خاص فيه
 export function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(element => {
     element.textContent = t(element.dataset.i18n);
@@ -336,7 +350,6 @@ export function applyTranslations() {
   });
 }
 
-// فحص للمطور فقط: يطبع في الـ Console أي مفتاح موجود بلغة وناقص بالثانية، أو مستخدم في الصفحة وما له ترجمة
 export function checkTranslations() {
   const arabicKeys = Object.keys(translations.ar);
   const englishKeys = Object.keys(translations.en);
