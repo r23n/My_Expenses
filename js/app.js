@@ -671,6 +671,7 @@ async function toggleReminder() {
   } catch (error) {
     console.error('Reminder error', error);
     setKey('#reminderStatus', 'reminderFailed');
+    document.querySelector('#reminderStatus').textContent += ' [' + (error.name || 'Error') + ': ' + (error.message || error) + ']';
   } finally {
     button.disabled = false;
   }
