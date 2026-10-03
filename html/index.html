@@ -52,6 +52,7 @@
       </section>
 
       <section class="upcoming-bills" id="upcomingBills" hidden></section>
+            <div class="reminder-banner" id="reminderBanner" hidden><span class="reminder-banner-icon">🔔</span><span data-i18n="reminderPrompt">تبي تذكير يومي الساعة ٩ مساءً إذا نسيت تسجل مصاريفك؟</span><button class="reminder-banner-on" id="reminderBannerOn" type="button" data-i18n="reminderPromptOn">فعّل</button><button class="reminder-banner-close" id="reminderBannerClose" type="button" data-i18n-aria="close" aria-label="إغلاق">×</button></div>
       <section class="stats-grid" data-i18n-aria="summary" aria-label="ملخص المصاريف">
         <article class="stat-card main-stat"><div class="stat-top"><span data-i18n="totalSpent">إجمالي المصروف</span><span class="stat-icon coral">↘</span></div><strong id="totalSpent"></strong><p id="spentCaption"></p></article>
         <article class="stat-card"><div class="stat-top"><span data-i18n="remaining">المتبقي من الميزانية</span><span class="stat-icon mint">✓</span></div><strong id="remainingBudget"></strong><p id="remainingCaption"></p></article>
@@ -96,7 +97,8 @@
           <label class="month-filter"><span data-i18n="month">الشهر</span><input id="monthFilter" type="month" /></label>
           <select id="categoryFilter" data-i18n-aria="filterByCategory" aria-label="تصفية حسب التصنيف">
             <option value="all" data-i18n="allCategories">كل التصنيفات</option>
-            <option value="طعام" data-i18n="catFood">طعام ومشروبات</option>
+            <option value="طعام" data-i18n="catFood">طعام</option>
+            <option value="مشروبات" data-i18n="catDrinks">مشروبات</option>
             <option value="مواصلات" data-i18n="catTransport">مواصلات</option>
             <option value="تسوق" data-i18n="catShopping">تسوق</option>
             <option value="فواتير" data-i18n="catBills">فواتير</option>
@@ -122,7 +124,8 @@
         <label><span data-i18n="amount">المبلغ</span><div class="amount-input"><input name="amount" type="number" min="0.001" step="0.001" placeholder="0.000" required /><span data-i18n="currency">د.ب</span></div></label>
         <label><span data-i18n="expenseType">نوع الصرف</span>
           <select name="category" id="categoryInput" required>
-            <option value="طعام" data-i18n="catFood">طعام ومشروبات</option>
+            <option value="طعام" data-i18n="catFood">طعام</option>
+            <option value="مشروبات" data-i18n="catDrinks">مشروبات</option>
             <option value="مواصلات" data-i18n="catTransport">مواصلات</option>
             <option value="تسوق" data-i18n="catShopping">تسوق</option>
             <option value="فواتير" data-i18n="catBills">فواتير</option>

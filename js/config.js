@@ -11,6 +11,7 @@ export const CURRENCY = 'BHD';
 
 export const CATEGORY_COLORS = {
   طعام: '#de6c5b',
+    مشروبات: '#e059d7',
   مواصلات: '#6bbc69',
   تسوق: '#e9c76d',
   فواتير: '#4f95d7',
@@ -19,7 +20,8 @@ export const CATEGORY_COLORS = {
 };
 
 export const CATEGORY_ICONS = {
-  طعام: '☕',
+  طعام: '🍽️',
+  مشروبات: '🥤',
   مواصلات: '🚚',
   تسوق: '🛒',
   فواتير: '🧾',

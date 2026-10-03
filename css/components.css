@@ -149,3 +149,14 @@ button, .nav-item, .install-step { -webkit-user-select: none; user-select: none;
 .reminder-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .reminder-section h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
 .reminder-status { margin: 0 0 10px; color: #8d9b99; font-size: 11px; line-height: 1.6; }
+.group-row { cursor: pointer; }
+.group-count { display: inline-block; margin-inline-start: 4px; padding: 0 6px; border-radius: 10px; background: #edf3f1; color: var(--teal-deep); font-size: 10px; font-weight: 700; }
+.group-arrow { width: 24px; color: #9ba7a7; font-size: 12px; text-align: center; transition: transform .2s ease; }
+.transaction-group.open .group-arrow { transform: rotate(180deg); }
+.group-items { padding-inline-start: 18px; border-inline-start: 2px solid #edf3f1; margin-inline-start: 18px; }
+.reminder-banner { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding: 12px 14px; border-radius: 12px; background: var(--teal-deep); color: #fff; font-size: 12px; }
+.reminder-banner[hidden] { display: none; }
+.reminder-banner > span:nth-child(2) { flex: 1; }
+.reminder-banner-icon { font-size: 18px; }
+.reminder-banner-on { padding: 7px 14px; border: 0; border-radius: 8px; background: var(--coral); color: #fff; font-size: 12px; font-weight: 700; }
+.reminder-banner-close { padding: 4px 8px; border: 0; background: transparent; color: #d7e6df; font-size: 18px; }

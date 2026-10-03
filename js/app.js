@@ -3,7 +3,7 @@ import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, upda
 import { applyTranslations, checkTranslations, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
 
 // القيم هذي تنحفظ بالعربي في قاعدة البيانات، فلا نغيرها حتى لو الواجهة إنجليزي
-const STANDARD_CATEGORIES = ['طعام', 'مواصلات', 'تسوق', 'فواتير', 'ترفيه', 'أخرى'];
+const STANDARD_CATEGORIES = ['طعام', 'مشروبات', 'مواصلات', 'تسوق', 'فواتير', 'ترفيه', 'أخرى'];
 const CUSTOM_CATEGORY = 'مخصص';
 const UNDO_SECONDS = 5;
 const PULL_WAIT_MS = 15000;
@@ -469,6 +469,7 @@ async function finishCloudSignIn(session) {
   setAppLocked(false);
   render();
   showInstallGuideOnce(session.user.id);
+  maybeShowReminderBanner();
   if (navigator.onLine) {
     // المتكرر ينضاف بعد السحب، عشان نشتغل على آخر نسخة من قائمة التكرار مو نسخة الجهاز القديمة
     await pullFromCloud(true);
@@ -695,6 +696,26 @@ function saveLanguageForWorker(language) {
 
 document.querySelector('#reminderButton').addEventListener('click', toggleReminder);
 
+function maybeShowReminderBanner() {
+  const banner = document.querySelector('#reminderBanner');
+  banner.hidden = true;
+  if (!currentSession || !remindersSupported()) return;
+  if (Notification.permission !== 'default') return;
+  if (localStorage.getItem(`sarfati-reminder-banner-${currentSession.user.id}`)) return;
+  banner.hidden = false;
+}
+
+function closeReminderBanner() {
+  if (currentSession) localStorage.setItem(`sarfati-reminder-banner-${currentSession.user.id}`, 'shown');
+  document.querySelector('#reminderBanner').hidden = true;
+}
+
+document.querySelector('#reminderBannerOn').addEventListener('click', async () => {
+  closeReminderBanner();
+  await toggleReminder();
+});
+document.querySelector('#reminderBannerClose').addEventListener('click', closeReminderBanner);
+
 // ---------- ربط الأزرار ----------
 
 document.querySelector('#openModal').addEventListener('click', () => openModal());
@@ -717,6 +738,12 @@ document.querySelector('#expenseForm').addEventListener('submit', event => {
 document.querySelector('#transactionList').addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button) return;
+    if (button.dataset.action === 'toggle') {
+    const group = button.closest('.transaction-group');
+    group.classList.toggle('open');
+    group.querySelector('.group-items').hidden = !group.classList.contains('open');
+    return;
+  }
   const item = expenses.find(expense => expense.id === button.dataset.id);
   if (!item) return;
   if (button.dataset.action === 'edit') openModal(item);

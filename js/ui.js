@@ -2,7 +2,12 @@ import { CATEGORY_COLORS, CATEGORY_ICONS } from './config.js';
 import { categoryLabel, currencyLabel, getLanguage, t } from './i18n.js';
 
 const locale = () => getLanguage() === 'en' ? 'en-BH' : 'ar-BH';
-const numberFormat = value => new Intl.NumberFormat(locale(), { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+const numberFormat = value => {
+  const text = new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+  if (getLanguage() === 'en') return text;
+  return text.replace(/[0-9]/g, digit => ARABIC_DIGITS[Number(digit)]);
+};
 
 export const money = value => `${numberFormat(value)} ${currencyLabel()}`;
 export const compactMoney = value => numberFormat(value);
@@ -122,8 +127,20 @@ export function updateReports(expenses) {
   document.querySelector('#topSpendingDayAmount').textContent = topDay ? money(topDay[1]) : t('addToSee');
 }
 
+function transactionRow(item) {
+  const color = categoryColor(item.category);
+  return `<div class="transaction-row"><div class="transaction-icon" style="background:${color}22;color:${color}">${CATEGORY_ICONS[item.category] || '•'}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong><button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${t('edit')} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.description)}">×</button></div>`;
+}
+
+function groupRow(items) {
+  const first = items[0];
+  const color = categoryColor(first.category);
+  let total = 0;
+  items.forEach(item => { total += item.amount; });
+  return `<div class="transaction-group"><div class="transaction-row group-row" data-action="toggle"><div class="transaction-icon" style="background:${color}22;color:${color}">${CATEGORY_ICONS[first.category] || '•'}</div><div class="transaction-main"><strong>${escapeHtml(first.description)} <span class="group-count">×${items.length}</span></strong><span>${escapeHtml(categoryLabel(first.category))} · ${dateLabel(first.date)}</span></div><strong class="transaction-amount">− ${money(total)}</strong><span class="group-arrow">▾</span></div><div class="group-items" hidden>${items.map(transactionRow).join('')}</div></div>`;
+}
+
 export function updateTransactions(expenses) {
-  // نحول البحث لحروف صغيرة ونبحث في اسم التصنيف المترجم بعد، عشان "food" و "Food" يلقون نفس النتيجة
   const query = document.querySelector('#searchInput').value.trim().toLowerCase();
   const category = document.querySelector('#categoryFilter').value;
   const filtered = expenses.filter(item => {
@@ -135,9 +152,17 @@ export function updateTransactions(expenses) {
   const filter = document.querySelector('#categoryFilter');
   const customCategories = [...new Set(expenses.map(item => item.category).filter(Boolean))].filter(item => !Object.keys(CATEGORY_COLORS).includes(item));
   customCategories.forEach(item => { if (!filter.querySelector(`option[value="${CSS.escape(item)}"]`)) filter.add(new Option(item, item)); });
-  const editWord = t('edit');
-  const deleteWord = t('delete');
-  document.querySelector('#transactionList').innerHTML = filtered.map(item => `<div class="transaction-row"><div class="transaction-icon" style="background:${categoryColor(item.category)}22;color:${categoryColor(item.category)}">${CATEGORY_ICONS[item.category] || '•'}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong><button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${editWord} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${deleteWord} ${escapeHtml(item.description)}">×</button></div>`).join('');
+  const groups = [];
+  const groupIndex = {};
+  filtered.forEach(item => {
+    const key = item.description.trim().toLowerCase() + '|' + item.category;
+    if (groupIndex[key] === undefined) {
+      groupIndex[key] = groups.length;
+      groups.push([]);
+    }
+    groups[groupIndex[key]].push(item);
+  });
+  document.querySelector('#transactionList').innerHTML = groups.map(items => items.length === 1 ? transactionRow(items[0]) : groupRow(items)).join('');
   document.querySelector('#emptyState').classList.toggle('visible', !filtered.length);
 }
 
