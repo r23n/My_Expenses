@@ -190,3 +190,59 @@ export function updateRecurringList(rules) {
   }
   list.innerHTML = rules.map(rule => `<div class="recurring-row"><div><strong>${escapeHtml(rule.description)}</strong><span>${escapeHtml(categoryLabel(rule.category))} · ${t('dayOfMonth')} ${rule.day}</span></div><strong>${money(rule.amount)}</strong><button class="transaction-delete" data-rule-id="${rule.id}" type="button" aria-label="${t('stopRecurring')} ${escapeHtml(rule.description)}" title="${t('stopRecurring')}">×</button></div>`).join('');
 }
+
+
+export function updateUpcoming(items) {
+  const box = document.querySelector('#upcomingBills');
+  if (!items.length) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const rows = items.map(item => {
+    let dueText = t('dueInMany').replace('{n}', item.days);
+    if (item.days === 1) dueText = t('dueIn1');
+    if (item.days === 2) dueText = t('dueIn2');
+    return `<div class="upcoming-row"><span class="upcoming-bell">⏰</span><div><strong>${escapeHtml(item.rule.description)}</strong><span>${dueText}</span></div><b>${money(item.rule.amount)}</b></div>`;
+  }).join('');
+  box.innerHTML = `<span class="section-kicker">${t('upcomingTitle')}</span>${rows}`;
+  box.hidden = false;
+}
+
+export function updateCalendar(month, expenses) {
+  const parts = month.split('-');
+  const year = Number(parts[0]);
+  const monthNumber = Number(parts[1]);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const firstWeekDay = new Date(year, monthNumber - 1, 1).getDay();
+  const emptyCells = (firstWeekDay + 1) % 7;
+  const totals = {};
+  expenses.forEach(item => {
+    if (item.date.startsWith(month)) totals[item.date] = (totals[item.date] || 0) + item.amount;
+  });
+  let max = 0;
+  Object.values(totals).forEach(value => { if (value > max) max = value; });
+  const today = todayKey(new Date());
+
+  const weekdayStyle = getLanguage() === 'en' ? 'short' : 'narrow';
+  const weekdayFormat = new Intl.DateTimeFormat(locale(), { weekday: weekdayStyle });
+  let weekdays = '';
+  for (let index = 0; index < 7; index++) {
+    const date = new Date(2024, 0, 6 + index);
+    weekdays += `<span>${weekdayFormat.format(date)}</span>`;
+  }
+  document.querySelector('#calendarWeekdays').innerHTML = weekdays;
+
+  let cells = '';
+  for (let index = 0; index < emptyCells; index++) cells += '<div class="calendar-day empty"></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${month}-${String(day).padStart(2, '0')}`;
+    const total = totals[key] || 0;
+    let level = 0;
+    if (total > 0) level = Math.max(1, Math.ceil(total / max * 4));
+    const todayClass = key === today ? ' today' : '';
+    const amount = total > 0 ? compactMoney(total) : '';
+    cells += `<div class="calendar-day level-${level}${todayClass}" title="${dateLabel(key)}: ${money(total)}"><span>${day}</span><small>${amount}</small></div>`;
+  }
+  document.querySelector('#calendarGrid').innerHTML = cells;
+}

@@ -1,5 +1,5 @@
 import { clearLocalData, emptyPending, loadBudgets, loadExpenses, loadLegacyBudget, loadPending, loadRecurring, saveBudgets, saveExpenses, savePending, saveRecurring } from './storage.js';
-import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, updateCategories, updateChart, updateComparison, updateRecurringList, updateReports, updateSummary, updateTransactions } from './ui.js';
+import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, updateCalendar, updateCategories, updateChart, updateComparison, updateRecurringList, updateReports, updateSummary, updateTransactions, updateUpcoming } from './ui.js';
 import { applyTranslations, checkTranslations, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
 
 // القيم هذي تنحفظ بالعربي في قاعدة البيانات، فلا نغيرها حتى لو الواجهة إنجليزي
@@ -240,6 +240,21 @@ function getVisibleExpenses() {
   return expenses.filter(item => item.date >= startKey && item.date <= endKey);
 }
 
+function upcomingBills() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const list = [];
+  recurring.forEach(rule => {
+    const nextDate = dateInMonth(addMonths(rule.lastMonth, 1), rule.day);
+    const parts = nextDate.split('-');
+    const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const days = Math.round((due - today) / 86400000);
+    if (days >= 1 && days <= 3) list.push({ rule: rule, days: days });
+  });
+  list.sort((a, b) => a.days - b.days);
+  return list;
+}
+
 function daysLeftInMonth() {
   const now = new Date();
   // نحسب الأيام الباقية للشهر الحالي بس، لأن الشهور الماضية ما فيها أيام باقية
@@ -279,6 +294,8 @@ function render() {
   updateCategories(visibleExpenses);
   updateReports(currentExpenses);
   renderComparison();
+  updateUpcoming(upcomingBills());
+  updateCalendar(selectedMonth, expenses);
   updateTransactions(visibleExpenses);
 }
 
@@ -298,6 +315,7 @@ function applyLanguage() {
   document.documentElement.lang = language;
   document.documentElement.dir = language === 'en' ? 'ltr' : 'rtl';
   document.title = t('pageTitle');
+  saveLanguageForWorker(language);
   applyTranslations();
   updateGreeting();
   updateAuthTexts();
@@ -434,6 +452,7 @@ function openSettings() {
   document.querySelector('#displayNameInput').value = getEnglishDisplayName();
   document.querySelector('#languageInput').value = getLanguage();
   updateRecurringList(recurring);
+  updateReminderButton();
   document.querySelector('#settingsModalBackdrop').hidden = false;
 }
 
@@ -467,6 +486,7 @@ async function signOutUser() {
     alert(t('signOutFailed'));
     return;
   }
+  await removeReminderForDevice();
   await cloudApi.signOut();
   currentSession = null;
   // نمسح نسخة الجهاز عشان لو دخل حساب ثاني ما تنرفع له مصاريف الحساب السابق
@@ -594,6 +614,85 @@ document.querySelector('#openInstallGuide').addEventListener('click', () => {
   closeSettings();
   openInstallGuide();
 });
+
+function remindersSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function urlBase64ToUint8Array(text) {
+  const padding = '='.repeat((4 - text.length % 4) % 4);
+  const base64 = (text + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const bytes = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index++) bytes[index] = raw.charCodeAt(index);
+  return bytes;
+}
+
+async function getPushSubscription() {
+  if (!remindersSupported()) return null;
+  const registration = await navigator.serviceWorker.ready;
+  return registration.pushManager.getSubscription();
+}
+
+async function updateReminderButton() {
+  const button = document.querySelector('#reminderButton');
+  if (!remindersSupported()) {
+    button.hidden = true;
+    setKey('#reminderStatus', isIos() && !isStandalone() ? 'reminderNeedsInstall' : 'reminderNotSupported');
+    return;
+  }
+  button.hidden = false;
+  const subscription = await getPushSubscription();
+  const enabled = Boolean(subscription) && Notification.permission === 'granted';
+  setKey('#reminderButton', enabled ? 'reminderOff' : 'reminderOn');
+  setKey('#reminderStatus', enabled ? 'reminderEnabled' : 'reminderDisabled');
+}
+
+async function toggleReminder() {
+  if (!currentSession || !cloudApi.cloudEnabled) return;
+  const button = document.querySelector('#reminderButton');
+  button.disabled = true;
+  try {
+    const current = await getPushSubscription();
+    if (current) {
+      await cloudApi.deletePushSubscription(current.endpoint);
+      await current.unsubscribe();
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setKey('#reminderStatus', 'reminderDenied');
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(cloudApi.vapidPublicKey) });
+      await cloudApi.savePushSubscription(currentSession.user.id, subscription.toJSON());
+    }
+    await updateReminderButton();
+  } catch (error) {
+    console.error('Reminder error', error);
+    setKey('#reminderStatus', 'reminderFailed');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function removeReminderForDevice() {
+  try {
+    const subscription = await getPushSubscription();
+    if (!subscription) return;
+    await cloudApi.deletePushSubscription(subscription.endpoint);
+    await subscription.unsubscribe();
+  } catch (error) {
+    console.error('Reminder cleanup error', error);
+  }
+}
+
+function saveLanguageForWorker(language) {
+  if (!('caches' in window)) return;
+  caches.open('my-expenses-settings').then(cache => cache.put('/settings/language', new Response(language))).catch(error => console.error(error));
+}
+
+document.querySelector('#reminderButton').addEventListener('click', toggleReminder);
 
 // ---------- ربط الأزرار ----------
 

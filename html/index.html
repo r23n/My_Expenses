@@ -51,6 +51,7 @@
         <button class="text-button" id="editBudget" type="button"><span id="budgetActionLabel" data-i18n="setBudget">تحديد الميزانية</span> <span class="flip-ltr">←</span></button>
       </section>
 
+      <section class="upcoming-bills" id="upcomingBills" hidden></section>
       <section class="stats-grid" data-i18n-aria="summary" aria-label="ملخص المصاريف">
         <article class="stat-card main-stat"><div class="stat-top"><span data-i18n="totalSpent">إجمالي المصروف</span><span class="stat-icon coral">↘</span></div><strong id="totalSpent"></strong><p id="spentCaption"></p></article>
         <article class="stat-card"><div class="stat-top"><span data-i18n="remaining">المتبقي من الميزانية</span><span class="stat-icon mint">✓</span></div><strong id="remainingBudget"></strong><p id="remainingCaption"></p></article>
@@ -76,6 +77,12 @@
         </article>
       </section>
 
+      <section class="panel calendar-panel">
+        <div class="panel-heading"><div><span class="section-kicker" data-i18n="calendarKicker">خريطة الصرف</span><h2 data-i18n="calendarTitle">تقويم الشهر</h2></div></div>
+        <div class="calendar-weekdays" id="calendarWeekdays"></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="calendar-legend"><span data-i18n="less">أقل</span><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span data-i18n="more">أكثر</span></div>
+      </section>
       <section class="report-grid" data-i18n-aria="monthlyReport" aria-label="تقرير الشهر">
         <article class="report-card"><span class="section-kicker" data-i18n="monthlyReport">تقرير الشهر</span><h2 data-i18n="topCategory">أعلى تصنيف صرف</h2><strong id="topCategory"></strong><p id="topCategoryAmount"></p></article>
         <article class="report-card"><span class="section-kicker" data-i18n="monthlyReport">تقرير الشهر</span><h2 data-i18n="topDay">أعلى يوم صرف</h2><strong id="topSpendingDay"></strong><p id="topSpendingDayAmount"></p></article>
@@ -174,6 +181,7 @@
         <label><span data-i18n="language">اللغة</span><select name="language" id="languageInput"><option value="ar">العربية</option><option value="en">English</option></select></label>
         <button class="primary-button full-width" type="submit"><span data-i18n="saveSettings">حفظ الإعدادات</span> <span>✓</span></button>
       </form>
+      <div class="reminder-section"><h3 data-i18n="reminderTitle">التذكير اليومي</h3><p class="reminder-status" id="reminderStatus"></p><button class="secondary-button full-width" id="reminderButton" type="button" data-i18n="reminderOn">فعّل تذكير الساعة ٩ مساءً</button></div>
       <button class="secondary-button full-width install-open" id="openInstallGuide" type="button" data-i18n="addToHomeScreen">أضف التطبيق للشاشة الرئيسية</button>
       <div class="recurring-section"><h3 data-i18n="recurringTitle">المصاريف المتكررة</h3><div id="recurringList"></div></div>
     </section>

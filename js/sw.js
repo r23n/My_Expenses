@@ -1,5 +1,6 @@
 // يغير الرقم مع كل تحديث كبير عشان المتصفح يمسح النسخة القديمة من الملفات
-const CACHE_NAME = 'my-expenses-v5';
+const CACHE_NAME = 'my-expenses-v6';
+const SETTINGS_CACHE = 'my-expenses-settings';
 
 const APP_FILES = [
   '/',
@@ -36,7 +37,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(names => Promise.all(names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))))
+    caches.keys().then(names => Promise.all(names.filter(name => name !== CACHE_NAME && name !== SETTINGS_CACHE).map(name => caches.delete(name))))
   );
   self.clients.claim();
 });
@@ -79,4 +80,34 @@ self.addEventListener('fetch', event => {
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'cdn.jsdelivr.net') {
     event.respondWith(cacheFirst(request));
   }
+});
+
+async function showReminder() {
+  let language = 'ar';
+  const cache = await caches.open(SETTINGS_CACHE);
+  const saved = await cache.match('/settings/language');
+  if (saved) language = await saved.text();
+  let title = 'مصاريفي';
+  let body = 'سجّلت مصاريف اليوم؟';
+  if (language === 'en') {
+    title = 'My Expenses';
+    body = "Did you log today's expenses?";
+  }
+  return self.registration.showNotification(title, { body: body, icon: '/assets/icon-192.png', badge: '/assets/icon-192.png', tag: 'daily-reminder' });
+}
+
+self.addEventListener('push', event => {
+  event.waitUntil(showReminder());
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if ('focus' in client) return client.focus();
+      }
+      return self.clients.openWindow('/html/');
+    })
+  );
 });

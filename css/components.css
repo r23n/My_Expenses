@@ -126,3 +126,26 @@ button, .nav-item, .install-step { -webkit-user-select: none; user-select: none;
 .install-number { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--teal-deep); color: #fff; font-size: 13px; font-weight: 700; }
 .install-icon { min-width: 42px; height: 42px; padding: 0 8px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--teal-deep); font-size: 13px; font-weight: 700; }
 .install-later { width: 100%; margin-top: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: #f7faf9; color: var(--ink); font-size: 13px; }
+.upcoming-bills { display: grid; gap: 8px; margin-bottom: 18px; padding: 14px 16px; border: 1px solid #f3d9a4; border-radius: 12px; background: #fff8e8; }
+.upcoming-bills[hidden] { display: none; }
+.upcoming-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.upcoming-row > div { display: grid; flex: 1; }
+.upcoming-row span { color: #a67718; font-size: 11px; }
+.upcoming-bell { font-size: 16px; }
+.calendar-panel { margin-bottom: 18px; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.calendar-weekdays { margin: 10px 0 6px; color: #9ba7a7; font-size: 10px; text-align: center; }
+.calendar-day { min-height: 46px; display: flex; flex-direction: column; justify-content: space-between; padding: 5px 6px; border-radius: 8px; background: #f3f6f5; font-size: 11px; }
+.calendar-day small { font-size: 9px; opacity: .85; }
+.calendar-day.empty { background: transparent; }
+.calendar-day.today { outline: 2px solid var(--coral); outline-offset: -2px; }
+.calendar-day.level-1, .calendar-legend .level-1 { background: #d6ebe4; }
+.calendar-day.level-2, .calendar-legend .level-2 { background: #a7d1c4; }
+.calendar-day.level-3, .calendar-legend .level-3 { background: #67a89a; color: #fff; }
+.calendar-day.level-4, .calendar-legend .level-4 { background: #2f6f66; color: #fff; }
+.calendar-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; color: #9ba7a7; font-size: 10px; }
+.calendar-legend i { width: 12px; height: 12px; border-radius: 3px; }
+@media (max-width: 640px) { .calendar-weekdays, .calendar-grid { gap: 4px; } .calendar-day { min-height: 40px; padding: 4px; font-size: 10px; } .calendar-day small { font-size: 8px; } }
+.reminder-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.reminder-section h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.reminder-status { margin: 0 0 10px; color: #8d9b99; font-size: 11px; line-height: 1.6; }

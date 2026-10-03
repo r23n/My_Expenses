@@ -1,5 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from './cloud-config.js';
+import { SUPABASE_ANON_KEY, SUPABASE_URL, VAPID_PUBLIC_KEY } from './cloud-config.js';
+
+export const vapidPublicKey = VAPID_PUBLIC_KEY;
 
 export const cloudEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 export const supabase = cloudEnabled ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
@@ -71,5 +73,18 @@ export async function deleteCloudExpenses(userId, ids) {
 export async function saveCloudProfile(userId, budgets, recurring, displayName) {
   if (!supabase) return;
   const { error } = await supabase.from('profiles').upsert({ id: userId, budgets, recurring, display_name: displayName }, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function savePushSubscription(userId, subscription) {
+  if (!supabase) return;
+  const row = { endpoint: subscription.endpoint, user_id: userId, p256dh: subscription.keys.p256dh, auth: subscription.keys.auth };
+  const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+  if (error) throw error;
+}
+
+export async function deletePushSubscription(endpoint) {
+  if (!supabase) return;
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
   if (error) throw error;
 }
