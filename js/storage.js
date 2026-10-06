@@ -67,3 +67,21 @@ export function savePending(pending) {
 export function clearLocalData() {
   Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
 }
+
+export function loadCategoryIcons() {
+  const icons = readJson(STORAGE_KEYS.categoryIcons, {});
+  return typeof icons === 'object' && !Array.isArray(icons) ? icons : {};
+}
+
+export function saveCategoryIcons(icons) {
+  localStorage.setItem(STORAGE_KEYS.categoryIcons, JSON.stringify(icons));
+}
+
+export function loadIncomes() {
+  const incomes = readJson(STORAGE_KEYS.incomes, []);
+  return Array.isArray(incomes) ? incomes : [];
+}
+
+export function saveIncomes(incomes) {
+  localStorage.setItem(STORAGE_KEYS.incomes, JSON.stringify(incomes));
+}

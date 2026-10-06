@@ -1,4 +1,4 @@
-import { CATEGORY_COLORS, CATEGORY_ICONS } from './config.js';
+import { CATEGORY_COLORS, CATEGORY_ICONS, CUSTOM_COLORS } from './config.js';
 import { categoryLabel, currencyLabel, getLanguage, t } from './i18n.js';
 
 const locale = () => getLanguage() === 'en' ? 'en-BH' : 'ar-BH';
@@ -72,10 +72,35 @@ export function updateSummary(expenses, budget, daysLeft = 0) {
   document.querySelector('#dailyAverage').textContent = money(days ? total / days : 0);
 }
 
+let customColorMap = {};
+let customIcons = {};
+
+export function setCategoryIcons(icons) {
+  customIcons = icons;
+}
+
+function categoryIcon(category) {
+  if (CATEGORY_ICONS[category]) return CATEGORY_ICONS[category];
+  if (customIcons[category]) return customIcons[category];
+  return '•';
+}
+
+export function setCustomColors(expenses) {
+  const customCategories = [];
+  expenses.forEach(item => {
+    if (!CATEGORY_COLORS[item.category] && !customCategories.includes(item.category)) customCategories.push(item.category);
+  });
+  customCategories.sort();
+  customColorMap = {};
+  customCategories.forEach((category, index) => {
+    customColorMap[category] = CUSTOM_COLORS[index % CUSTOM_COLORS.length];
+  });
+}
+
 function categoryColor(category) {
   if (CATEGORY_COLORS[category]) return CATEGORY_COLORS[category];
-  const colors = Object.values(CATEGORY_COLORS);
-  return colors[category.length % colors.length];
+  if (customColorMap[category]) return customColorMap[category];
+  return CUSTOM_COLORS[0];
 }
 
 export function updateChart(expenses, now, weekOffset = 0) {
@@ -92,7 +117,18 @@ export function updateChart(expenses, now, weekOffset = 0) {
     values.push({ key, label: dayFormat.format(date), value });
   }
   const max = Math.max(...values.map(item => item.value), 1);
-  document.querySelector('#weeklyChart').innerHTML = values.map(item => `<div class="chart-bar ${weekOffset === 0 && item.key === todayKey(now) ? 'today' : ''}" style="height:${Math.max(item.value / max * 100, 3)}%" data-value="${compactMoney(item.value)}" data-currency="${currencyLabel()}"></div>`).join('');
+    let bars = '';
+  values.forEach(item => {
+    let height = 2;
+    let classes = 'chart-bar empty';
+    if (item.value > 0) {
+      height = Math.max(item.value / max * 100, 10);
+      classes = 'chart-bar has-value';
+    }
+    if (weekOffset === 0 && item.key === todayKey(now)) classes += ' today';
+    bars += `<div class="${classes}" style="height:${height}%" data-value="${compactMoney(item.value)}"></div>`;
+  });
+  document.querySelector('#weeklyChart').innerHTML = bars;
   document.querySelector('#chartDays').innerHTML = values.map(item => `<span>${item.label}</span>`).join('');
 }
 
@@ -108,7 +144,7 @@ export function updateCategories(expenses) {
   let progress = 0;
   const stops = sorted.length ? sorted.map(([category, value]) => { const start = progress; progress += value / total * 100; return `${categoryColor(category)} ${start}% ${progress}%`; }).join(',') : '#dce7e3 0 100%';
   document.querySelector('#donutChart').style.background = `conic-gradient(${stops})`;
-  document.querySelector('#categoryList').innerHTML = sorted.slice(0, 4).map(([category, value]) => `<div class="category-row"><span class="category-name"><i class="category-dot" style="background:${categoryColor(category)}"></i>${escapeHtml(categoryLabel(category))}</span><strong class="category-amount">${money(value)}</strong></div>`).join('') || `<span style="font-size:11px;color:#9ba7a7">${t('noCategories')}</span>`;
+  document.querySelector('#categoryList').innerHTML = sorted.slice(0, 5).map(([category, value]) => `<div class="category-row"><span class="category-name"><i class="category-dot" style="background:${categoryColor(category)}"></i>${escapeHtml(categoryLabel(category))}</span><strong class="category-amount">${money(value)}</strong></div>`).join('') || `<span style="font-size:11px;color:#9ba7a7">${t('noCategories')}</span>`;
 }
 
 export function updateReports(expenses) {
@@ -129,7 +165,7 @@ export function updateReports(expenses) {
 
 function transactionRow(item) {
   const color = categoryColor(item.category);
-  return `<div class="transaction-row"><div class="transaction-icon" style="background:${color}22;color:${color}">${CATEGORY_ICONS[item.category] || '•'}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong><button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${t('edit')} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.description)}">×</button></div>`;
+  return `<div class="transaction-row"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(item.category)}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong><button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${t('edit')} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.description)}">×</button></div>`;
 }
 
 function groupRow(items) {
@@ -137,7 +173,7 @@ function groupRow(items) {
   const color = categoryColor(first.category);
   let total = 0;
   items.forEach(item => { total += item.amount; });
-  return `<div class="transaction-group"><div class="transaction-row group-row" data-action="toggle"><div class="transaction-icon" style="background:${color}22;color:${color}">${CATEGORY_ICONS[first.category] || '•'}</div><div class="transaction-main"><strong>${escapeHtml(first.description)} <span class="group-count">×${items.length}</span></strong><span>${escapeHtml(categoryLabel(first.category))} · ${dateLabel(first.date)}</span></div><strong class="transaction-amount">− ${money(total)}</strong><span class="group-arrow">▾</span></div><div class="group-items" hidden>${items.map(transactionRow).join('')}</div></div>`;
+  return `<div class="transaction-group"><div class="transaction-row group-row" data-action="toggle"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(first.category)}</div><div class="transaction-main"><strong>${escapeHtml(first.description)} <span class="group-count">×${items.length}</span></strong><span>${escapeHtml(categoryLabel(first.category))} · ${dateLabel(first.date)}</span></div><strong class="transaction-amount">− ${money(total)}</strong><span class="group-arrow">▾</span></div><div class="group-items" hidden>${items.map(transactionRow).join('')}</div></div>`;
 }
 
 export function updateTransactions(expenses) {
@@ -270,4 +306,32 @@ export function updateCalendar(month, expenses) {
     cells += `<div class="calendar-day level-${level}${todayClass}" title="${dateLabel(key)}: ${money(total)}"><span>${day}</span><small>${amount}</small></div>`;
   }
   document.querySelector('#calendarGrid').innerHTML = cells;
+}
+
+export function updateIncome(incomeList, expenseList) {
+  let incomeTotal = 0;
+  incomeList.forEach(item => { incomeTotal += item.amount; });
+  let spentTotal = 0;
+  expenseList.forEach(item => { spentTotal += item.amount; });
+  const saved = incomeTotal - spentTotal;
+  document.querySelector('#incomeTotal').textContent = money(incomeTotal);
+  document.querySelector('#incomeSpent').textContent = money(spentTotal);
+  const savedElement = document.querySelector('#savedTotal');
+  savedElement.textContent = money(saved);
+  savedElement.classList.toggle('negative', saved < 0);
+  const bar = document.querySelector('#savingsBar');
+  const rate = document.querySelector('#savingsRate');
+  if (incomeTotal === 0) {
+    bar.style.width = '0%';
+    rate.textContent = t('addIncomeHint');
+  } else if (saved < 0) {
+    bar.style.width = '0%';
+    rate.textContent = `${t('overspentIncome')} ${money(-saved)}`;
+  } else {
+    const percent = Math.round(saved / incomeTotal * 100);
+    bar.style.width = `${percent}%`;
+    rate.textContent = `${percent}% ${t('savingsRateOf')}`;
+  }
+  const sorted = [...incomeList].sort((a, b) => b.date.localeCompare(a.date));
+  document.querySelector('#incomeList').innerHTML = sorted.map(item => `<div class="income-row"><div><strong>${escapeHtml(item.source)}</strong><span>${dateLabel(item.date)}</span></div><b>+ ${money(item.amount)}</b><button class="transaction-delete" data-income-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.source)}">×</button></div>`).join('');
 }

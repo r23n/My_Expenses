@@ -1,5 +1,5 @@
-import { clearLocalData, emptyPending, loadBudgets, loadExpenses, loadLegacyBudget, loadPending, loadRecurring, saveBudgets, saveExpenses, savePending, saveRecurring } from './storage.js';
-import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, updateCalendar, updateCategories, updateChart, updateComparison, updateRecurringList, updateReports, updateSummary, updateTransactions, updateUpcoming } from './ui.js';
+import { clearLocalData, emptyPending, loadBudgets, loadCategoryIcons, loadExpenses, loadIncomes, loadLegacyBudget, loadPending, loadRecurring, saveBudgets, saveCategoryIcons, saveExpenses, saveIncomes, savePending, saveRecurring } from './storage.js';
+import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, setCategoryIcons, setCustomColors, updateCalendar, updateCategories, updateChart, updateComparison, updateIncome, updateRecurringList, updateReports, updateSummary, updateTransactions, updateUpcoming } from './ui.js';
 import { applyTranslations, checkTranslations, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
 
 // القيم هذي تنحفظ بالعربي في قاعدة البيانات، فلا نغيرها حتى لو الواجهة إنجليزي
@@ -11,6 +11,9 @@ const PULL_WAIT_MS = 15000;
 let expenses = loadExpenses();
 let budgets = loadBudgets();
 let recurring = loadRecurring();
+let categoryIcons = loadCategoryIcons();
+let incomes = loadIncomes();
+let selectedIcon = '';
 let pending = loadPending();
 let selectedMonth = todayKey(new Date()).slice(0, 7);
 let selectedWeekOffset = 0;
@@ -173,7 +176,7 @@ async function pushChanges() {
     const changedExpenses = expenses.filter(item => upsertIds.includes(item.id));
     await cloudApi.upsertCloudExpenses(userId, changedExpenses);
     await cloudApi.deleteCloudExpenses(userId, deleteIds);
-    if (profileChanged) await cloudApi.saveCloudProfile(userId, budgets, recurring, getEnglishDisplayName());
+    if (profileChanged) await cloudApi.saveCloudProfile(userId, budgets, recurring, getEnglishDisplayName(), getLanguage(), categoryIcons, incomes);
     pending.upserts = pending.upserts.filter(id => !upsertIds.includes(id));
     pending.deletes = pending.deletes.filter(id => !deleteIds.includes(id));
     if (profileChanged) pending.profile = false;
@@ -205,6 +208,10 @@ async function pullFromCloud(firstTime = false) {
       expenses = cloudData.expenses;
       budgets = cloudData.budgets;
       recurring = cloudData.recurring;
+      categoryIcons = cloudData.categoryIcons;
+      incomes = cloudData.incomes;
+      saveIncomes(incomes);
+      saveCategoryIcons(categoryIcons);
       saveExpenses(expenses);
       saveBudgets(budgets);
       saveRecurring(recurring);
@@ -279,6 +286,8 @@ function renderComparison() {
 }
 
 function render() {
+  setCustomColors(expenses);
+  setCategoryIcons(categoryIcons);
   const currentExpenses = monthExpenses(selectedMonth);
   const visibleExpenses = getVisibleExpenses();
   const weekRange = getWeekRange(new Date(), selectedWeekOffset);
@@ -294,6 +303,7 @@ function render() {
   updateCategories(visibleExpenses);
   updateReports(currentExpenses);
   renderComparison();
+  updateIncome(incomes.filter(item => item.date.startsWith(selectedMonth)), currentExpenses);
   updateUpcoming(upcomingBills());
   updateCalendar(selectedMonth, expenses);
   updateTransactions(visibleExpenses);
@@ -328,8 +338,51 @@ function applyLanguage() {
 function showCustomField(show) {
   const customInput = document.querySelector('#customCategoryInput');
   document.querySelector('#customCategoryField').hidden = !show;
+  document.querySelector('#iconPicker').hidden = !show;
   customInput.required = show;
   if (!show) customInput.value = '';
+}
+
+function renderIconPicker() {
+  document.querySelectorAll('#iconPicker [data-icon]').forEach(button => {
+    button.classList.toggle('selected', button.dataset.icon === selectedIcon);
+  });
+}
+
+function updateDescriptionSuggestions() {
+  const names = [];
+  const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  sorted.forEach(item => {
+    if (!names.includes(item.description)) names.push(item.description);
+  });
+  let options = '';
+  names.slice(0, 50).forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    options += option.outerHTML;
+  });
+  document.querySelector('#descriptionSuggestions').innerHTML = options;
+}
+
+function fillFromPastExpense() {
+  if (editingId) return;
+  const form = document.querySelector('#expenseForm');
+  const text = form.elements.description.value.trim().toLowerCase();
+  if (!text) return;
+  const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  const match = sorted.find(item => item.description.trim().toLowerCase() === text);
+  if (!match) return;
+  if (STANDARD_CATEGORIES.includes(match.category)) {
+    form.elements.category.value = match.category;
+    showCustomField(false);
+  } else {
+    form.elements.category.value = CUSTOM_CATEGORY;
+    showCustomField(true);
+    document.querySelector('#customCategoryInput').value = match.category;
+    selectedIcon = categoryIcons[match.category] || '';
+    renderIconPicker();
+  }
+  if (!form.elements.amount.value) form.elements.amount.value = match.amount;
 }
 
 function openModal(expense = null) {
@@ -352,6 +405,10 @@ function openModal(expense = null) {
     form.elements.date.value = todayKey(new Date());
   }
   showCustomField(form.elements.category.value === CUSTOM_CATEGORY);
+  selectedIcon = '';
+  if (expense && !STANDARD_CATEGORIES.includes(expense.category)) selectedIcon = categoryIcons[expense.category] || '';
+  renderIconPicker();
+  updateDescriptionSuggestions();
   // خيار التكرار للمصروف الجديد بس، لأن التعديل يغير مصروف واحد مو القاعدة كلها
   document.querySelector('#repeatField').hidden = Boolean(editingId);
   setKey('#expenseModalKicker', editingId ? 'editExpense' : 'newExpense');
@@ -372,6 +429,11 @@ function saveExpenseFromForm(form) {
   const description = form.elements.description.value.trim();
   // وصف من مسافات فاضية ينحذف لاحقًا عند التحميل، فنرفضه من البداية
   if (!category || !description) return false;
+  if (form.elements.category.value === CUSTOM_CATEGORY && selectedIcon && categoryIcons[category] !== selectedIcon) {
+    categoryIcons[category] = selectedIcon;
+    saveCategoryIcons(categoryIcons);
+    markProfileChanged();
+  }
 
   const amount = Number(form.elements.amount.value);
   const date = form.elements.date.value;
@@ -495,6 +557,8 @@ async function signOutUser() {
   expenses = [];
   budgets = {};
   recurring = [];
+  categoryIcons = {};
+  incomes = [];
   pending = emptyPending();
   saveEnglishDisplayName('');
   localStorage.removeItem('sarfati-display-name');
@@ -607,6 +671,7 @@ document.querySelector('#installNowButton').addEventListener('click', async () =
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
   closeInstallGuide();
+  closeIncomeModal();
 });
 document.querySelector('#installLater').addEventListener('click', closeInstallGuide);
 document.querySelector('#closeInstall').addEventListener('click', closeInstallGuide);
@@ -725,6 +790,8 @@ document.querySelector('#modalBackdrop').addEventListener('click', event => { if
 
 document.querySelector('#categoryInput').addEventListener('change', event => {
   showCustomField(event.target.value === CUSTOM_CATEGORY);
+  selectedIcon = '';
+  renderIconPicker();
 });
 
 document.querySelector('#expenseForm').addEventListener('submit', event => {
@@ -751,6 +818,83 @@ document.querySelector('#transactionList').addEventListener('click', event => {
 });
 
 document.querySelector('#undoButton').addEventListener('click', undoDelete);
+
+function openIncomeModal() {
+  const form = document.querySelector('#incomeForm');
+  form.reset();
+  form.elements.date.value = todayKey(new Date());
+  const sources = [t('salary'), t('freelance'), t('otherIncome')];
+  incomes.forEach(item => {
+    if (!sources.includes(item.source)) sources.push(item.source);
+  });
+  let options = '';
+  sources.forEach(source => {
+    const option = document.createElement('option');
+    option.value = source;
+    options += option.outerHTML;
+  });
+  document.querySelector('#incomeSources').innerHTML = options;
+  document.querySelector('#incomeModalBackdrop').hidden = false;
+  form.elements.amount.focus();
+}
+
+function closeIncomeModal() {
+  document.querySelector('#incomeModalBackdrop').hidden = true;
+}
+
+document.querySelector('#addIncome').addEventListener('click', openIncomeModal);
+document.querySelector('#closeIncomeModal').addEventListener('click', closeIncomeModal);
+document.querySelector('#incomeModalBackdrop').addEventListener('click', event => { if (event.target.id === 'incomeModalBackdrop') closeIncomeModal(); });
+
+document.querySelector('#incomeForm').elements.source.addEventListener('change', event => {
+  const form = document.querySelector('#incomeForm');
+  const text = event.target.value.trim().toLowerCase();
+  const sorted = [...incomes].sort((a, b) => b.date.localeCompare(a.date));
+  const match = sorted.find(item => item.source.trim().toLowerCase() === text);
+  if (match && !form.elements.amount.value) form.elements.amount.value = match.amount;
+});
+
+document.querySelector('#incomeForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const form = event.target;
+  const source = form.elements.source.value.trim();
+  const amount = Number(form.elements.amount.value);
+  if (!source || !(amount > 0)) return;
+  incomes.push({ id: crypto.randomUUID(), amount: amount, source: source, date: form.elements.date.value });
+  saveIncomes(incomes);
+  markProfileChanged();
+  pushChanges();
+  closeIncomeModal();
+  render();
+});
+
+document.querySelector('#incomeList').addEventListener('click', event => {
+  const button = event.target.closest('[data-income-id]');
+  if (!button) return;
+  if (!confirm(t('confirmDeleteIncome'))) return;
+  incomes = incomes.filter(item => item.id !== button.dataset.incomeId);
+  saveIncomes(incomes);
+  markProfileChanged();
+  pushChanges();
+  render();
+});
+
+document.querySelector('#iconPicker').addEventListener('click', event => {
+  const button = event.target.closest('[data-icon]');
+  if (!button) return;
+  selectedIcon = selectedIcon === button.dataset.icon ? '' : button.dataset.icon;
+  renderIconPicker();
+});
+
+document.querySelector('#customCategoryInput').addEventListener('change', event => {
+  const name = event.target.value.trim();
+  if (categoryIcons[name]) {
+    selectedIcon = categoryIcons[name];
+    renderIconPicker();
+  }
+});
+
+document.querySelector('#expenseForm').elements.description.addEventListener('change', fillFromPastExpense);
 
 document.querySelector('#recurringList').addEventListener('click', event => {
   const button = event.target.closest('[data-rule-id]');
@@ -801,6 +945,20 @@ document.querySelector('#mobileMenuButton').addEventListener('click', openMobile
 document.querySelector('#mobileMenuBackdrop').addEventListener('click', closeMobileMenu);
 document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', closeMobileMenu));
 
+function updateActiveNav() {
+  const line = window.innerHeight * 0.4;
+  let current = 'dashboard';
+  if (document.querySelector('#insights').getBoundingClientRect().top <= line) current = 'insights';
+  if (document.querySelector('#transactions').getBoundingClientRect().top <= line) current = 'transactions';
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = 'transactions';
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+  });
+}
+
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+window.addEventListener('resize', updateActiveNav);
+updateActiveNav();
 document.querySelector('#authButton').addEventListener('click', () => {
   if (currentSession) signOutUser();
   else openAuthModal();

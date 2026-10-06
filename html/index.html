@@ -28,8 +28,8 @@
       <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=5" alt="" /><div><strong data-i18n="appName">مصاريفي</strong><span data-i18n="brandTagline">مصاريفك بوضوح</span></div></div>
       <nav class="side-nav" data-i18n-aria="mainNav" aria-label="التنقل الرئيسي">
         <a class="nav-item active" href="#dashboard"><span>⌂</span><span data-i18n="overview">نظرة عامة</span></a>
-        <a class="nav-item" href="#transactions"><span>↙</span><span data-i18n="expenses">المصروفات</span></a>
         <a class="nav-item" href="#insights"><span>▥</span><span data-i18n="insights">التحليلات</span></a>
+        <a class="nav-item" href="#transactions"><span>↙</span><span data-i18n="expenses">المصروفات</span></a>
       </nav>
       <button class="sidebar-settings" id="settingsButton" type="button"><span class="sidebar-settings-icon">⚙</span><span data-i18n="settings">الإعدادات</span></button>
       <div class="cloud-status" id="cloudStatus">محفوظ على هذا الجهاز</div>
@@ -57,6 +57,14 @@
         <article class="stat-card main-stat"><div class="stat-top"><span data-i18n="totalSpent">إجمالي المصروف</span><span class="stat-icon coral">↘</span></div><strong id="totalSpent"></strong><p id="spentCaption"></p></article>
         <article class="stat-card"><div class="stat-top"><span data-i18n="remaining">المتبقي من الميزانية</span><span class="stat-icon mint">✓</span></div><strong id="remainingBudget"></strong><p id="remainingCaption"></p></article>
         <article class="stat-card"><div class="stat-top"><span data-i18n="dailyAverage">متوسط الصرف اليومي</span><span class="stat-icon yellow">≈</span></div><strong id="dailyAverage"></strong><p data-i18n="daysRecorded">خلال الأيام المسجلة</p></article>
+      </section>
+
+      <section class="panel income-panel">
+        <div class="panel-heading"><div><span class="section-kicker" data-i18n="incomeKicker">الدخل والادخار</span><h2 data-i18n="incomeTitle">كم وفرت هالشهر؟</h2></div><button class="text-button" id="addIncome" type="button"><span>＋</span> <span data-i18n="addIncome">إضافة دخل</span></button></div>
+        <div class="income-stats"><div><span data-i18n="incomeTotalLabel">الدخل</span><strong id="incomeTotal"></strong></div><div><span data-i18n="spentLabel">المصروف</span><strong id="incomeSpent"></strong></div><div><span data-i18n="savedLabel">الموفّر</span><strong id="savedTotal"></strong></div></div>
+        <div class="progress-track"><div class="progress-value" id="savingsBar"></div></div>
+        <p class="income-rate" id="savingsRate"></p>
+        <div class="income-list" id="incomeList"></div>
       </section>
 
       <section class="content-grid">
@@ -135,7 +143,8 @@
           </select>
         </label>
         <label class="custom-category" id="customCategoryField" hidden><span data-i18n="customType">اكتب نوع الصرف</span><input name="customCategory" id="customCategoryInput" type="text" maxlength="30" /></label>
-        <label><span data-i18n="description">وصف مختصر</span><input name="description" type="text" maxlength="50" required /></label>
+        <div class="icon-picker" id="iconPicker" hidden><span data-i18n="chooseIcon">اختر أيقونة</span><div class="icon-options"><button type="button" data-icon="💈">💈</button><button type="button" data-icon="🏋️">🏋️</button><button type="button" data-icon="⛽">⛽</button><button type="button" data-icon="🚗">🚗</button><button type="button" data-icon="🏠">🏠</button><button type="button" data-icon="💡">💡</button><button type="button" data-icon="📱">📱</button><button type="button" data-icon="🎁">🎁</button><button type="button" data-icon="👕">👕</button><button type="button" data-icon="💊">💊</button><button type="button" data-icon="🏥">🏥</button><button type="button" data-icon="📚">📚</button><button type="button" data-icon="🎮">🎮</button><button type="button" data-icon="🐾">🐾</button><button type="button" data-icon="✈️">✈️</button><button type="button" data-icon="🧾">🧾</button><button type="button" data-icon="🛠️">🛠️</button><button type="button" data-icon="💳">💳</button><button type="button" data-icon="🍔">🍔</button><button type="button" data-icon="☕">☕</button></div></div>
+        <label><span data-i18n="description">وصف مختصر</span><input name="description" type="text" maxlength="50" list="descriptionSuggestions" autocomplete="off" required /><datalist id="descriptionSuggestions"></datalist></label>
         <label><span data-i18n="date">التاريخ</span><input name="date" type="date" required /></label>
                 <label class="repeat-field" id="repeatField"><input name="repeat" type="checkbox" /><span data-i18n="repeatMonthly">كرره كل شهر بنفس اليوم</span></label>
         <button class="primary-button full-width" type="submit"><span id="expenseSubmitLabel" data-i18n="saveExpense">حفظ المصروف</span> <span>✓</span></button>
@@ -198,6 +207,21 @@
       <button class="install-later" id="installLater" type="button" data-i18n="notNow">ليس الآن</button>
     </section>
   </div>
+
+  <div class="modal-backdrop" id="incomeModalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="incomeModalTitle">
+      <button class="close-button" id="closeIncomeModal" type="button" data-i18n-aria="close" aria-label="إغلاق">×</button>
+      <span class="section-kicker" data-i18n="incomeKicker">الدخل والادخار</span>
+      <h2 id="incomeModalTitle" data-i18n="addIncome">إضافة دخل</h2>
+      <form id="incomeForm">
+        <label><span data-i18n="amount">المبلغ</span><div class="amount-input"><input name="amount" type="number" min="0.001" step="0.001" placeholder="0.000" required /><span data-i18n="currency">د.ب</span></div></label>
+        <label><span data-i18n="incomeSource">مصدر الدخل</span><input name="source" type="text" maxlength="40" list="incomeSources" autocomplete="off" required /><datalist id="incomeSources"></datalist></label>
+        <label><span data-i18n="date">التاريخ</span><input name="date" type="date" required /></label>
+        <button class="primary-button full-width" type="submit"><span data-i18n="saveIncome">حفظ الدخل</span> <span>✓</span></button>
+      </form>
+    </section>
+  </div>
+
     <div class="toast" id="undoToast" role="status" hidden><span data-i18n="expenseDeleted">انحذف المصروف</span><button id="undoButton" type="button" data-i18n="undo">تراجع</button></div>
   <script type="module" src="../js/app.js?v=5"></script>
 </body>
