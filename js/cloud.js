@@ -52,6 +52,7 @@ export async function loadCloudData(userId) {
     budgets: profile.budgets || {},
     recurring: profile.recurring || [],
     legacyBudget: Number(profile.budget || 0),
+    displayName: profile.display_name || '',
     language: profile.language || '',
     categoryIcons: profile.category_icons || {},
     incomes: profile.incomes || []

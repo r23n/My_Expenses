@@ -1,5 +1,5 @@
 // يغير الرقم مع كل تحديث كبير عشان المتصفح يمسح النسخة القديمة من الملفات
-const CACHE_NAME = 'my-expenses-v6';
+const CACHE_NAME = 'my-expenses-v7';
 const SETTINGS_CACHE = 'my-expenses-settings';
 
 const APP_FILES = [
@@ -7,20 +7,17 @@ const APP_FILES = [
   '/index.html',
   '/html/',
   '/html/index.html',
-  '/css/reset.css?v=5',
-  '/css/layout.css?v=5',
-  '/css/components.css?v=5',
-  '/js/app.js?v=5',
+  '/css/reset.css?v=6',
+  '/css/layout.css?v=6',
+  '/css/components.css?v=6',
+  '/js/app.js?v=6',
   '/js/ui.js',
   '/js/i18n.js',
   '/js/storage.js',
   '/js/config.js',
   '/js/cloud.js',
   '/js/cloud-config.js',
-  '/assets/logo.svg?v=5',
-  '/assets/icon-180.png',
-  '/assets/icon-192.png',
-  '/assets/icon-512.png',
+  '/assets/logo.svg?v=6',
   '/assets/icon-180.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',

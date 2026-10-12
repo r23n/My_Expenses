@@ -1,5 +1,5 @@
 import { clearLocalData, emptyPending, loadBudgets, loadCategoryIcons, loadExpenses, loadIncomes, loadLegacyBudget, loadPending, loadRecurring, saveBudgets, saveCategoryIcons, saveExpenses, saveIncomes, savePending, saveRecurring } from './storage.js';
-import { formatMonth, formatToday, formatWeekRange, getWeekRange, todayKey, setCategoryIcons, setCustomColors, updateCalendar, updateCategories, updateChart, updateComparison, updateIncome, updateRecurringList, updateReports, updateSummary, updateTransactions, updateUpcoming } from './ui.js';
+import { compactMoney, formatMonth, localDigits, formatToday, formatWeekRange, getWeekRange, todayKey, setCategoryIcons, setCustomColors, setLockChecker, updateArchive, updateCalendar, updateCategories, updateChart, updateComparison, updateIncome, updatePriceChanges, updateRecurringList, updateReports, updateSummary, updateTransactions, updateUpcoming } from './ui.js';
 import { applyTranslations, checkTranslations, getEnglishDisplayName, getLanguage, saveEnglishDisplayName, saveLanguage, t } from './i18n.js';
 
 // القيم هذي تنحفظ بالعربي في قاعدة البيانات، فلا نغيرها حتى لو الواجهة إنجليزي
@@ -7,6 +7,7 @@ const STANDARD_CATEGORIES = ['طعام', 'مشروبات', 'مواصلات', 'ت
 const CUSTOM_CATEGORY = 'مخصص';
 const UNDO_SECONDS = 5;
 const PULL_WAIT_MS = 15000;
+const GRACE_DAYS = 3;
 
 let expenses = loadExpenses();
 let budgets = loadBudgets();
@@ -43,7 +44,34 @@ function setCloudStatus(key, extra = '') {
   document.querySelector('#cloudStatus').textContent = extra ? `${t(key)} ${extra}` : t(key);
 }
 
+let dialogAnswer = null;
+
+function showDialog(message, confirmText = '') {
+  document.querySelector('#dialogMessage').textContent = message;
+  const okButton = document.querySelector('#dialogOk');
+  const cancelButton = document.querySelector('#dialogCancel');
+  okButton.textContent = confirmText || t('ok');
+  okButton.classList.toggle('danger', Boolean(confirmText));
+  cancelButton.hidden = !confirmText;
+  document.querySelector('#dialogBackdrop').hidden = false;
+  okButton.focus();
+  return new Promise(resolve => {
+    dialogAnswer = resolve;
+  });
+}
+
+function closeDialog(answer) {
+  document.querySelector('#dialogBackdrop').hidden = true;
+  if (dialogAnswer) dialogAnswer(answer);
+  dialogAnswer = null;
+}
+
+function stopLoading() {
+  document.body.classList.remove('loading');
+}
+
 function setAppLocked(locked) {
+  if (locked) stopLoading();
   document.body.classList.toggle('app-locked', locked);
   document.querySelector('#authGate').hidden = !locked;
 }
@@ -216,8 +244,16 @@ async function pullFromCloud(firstTime = false) {
       saveBudgets(budgets);
       saveRecurring(recurring);
       if (moveLegacyBudget(cloudData.legacyBudget)) markProfileChanged();
-      saveEnglishDisplayName(cloudData.displayName);
+      saveEnglishDisplayName(cloudData.displayName || '');
       updateGreeting();
+      if (cloudData.language) {
+        if (cloudData.language !== getLanguage()) {
+          saveLanguage(cloudData.language);
+          applyLanguage();
+        }
+      } else {
+        markProfileChanged();
+      }
     }
     addDueRecurring();
     await pushChanges();
@@ -270,6 +306,163 @@ function daysLeftInMonth() {
   return lastDay - now.getDate() + 1;
 }
 
+function sameName(text) {
+  return text.trim().toLowerCase();
+}
+
+function lastPrice(description, skipId) {
+  const name = sameName(description);
+  if (!name) return 0;
+  const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  const match = sorted.find(item => item.id !== skipId && sameName(item.description) === name);
+  if (!match) return 0;
+  return match.amount;
+}
+
+function updatePriceHint() {
+  const form = document.querySelector('#expenseForm');
+  const hint = document.querySelector('#priceHint');
+  const amount = Number(form.elements.amount.value);
+  const previous = lastPrice(form.elements.description.value, editingId);
+  hint.classList.remove('up', 'down');
+  if (!previous || !(amount > 0) || amount === previous) {
+    hint.hidden = true;
+    return;
+  }
+  const percent = Math.round((amount - previous) / previous * 100);
+  let arrow = '⬇️';
+  if (percent > 0) arrow = '⬆️';
+  hint.classList.add(percent > 0 ? 'up' : 'down');
+  hint.textContent = `${arrow} ${t('lastPaid')} ${compactMoney(previous)} (${percent > 0 ? '+' : ''}${localDigits(percent)}%)`;
+  hint.hidden = false;
+}
+
+function priceChanges(month) {
+  const sorted = [...expenses].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+  const lastInMonth = {};
+  sorted.forEach(item => {
+    if (item.date.startsWith(month)) lastInMonth[sameName(item.description)] = item;
+  });
+  const list = [];
+  Object.keys(lastInMonth).forEach(name => {
+    const latest = lastInMonth[name];
+    const before = sorted.filter(item => sameName(item.description) === name && item.id !== latest.id && (item.date < latest.date || (item.date === latest.date && item.createdAt < latest.createdAt)));
+    if (!before.length) return;
+    const previous = before[before.length - 1];
+    if (previous.amount === latest.amount) return;
+    const percent = Math.round((latest.amount - previous.amount) / previous.amount * 100);
+    if (Math.abs(percent) > 50) return;
+    list.push({ description: latest.description, category: latest.category, from: previous.amount, to: latest.amount, percent: percent });
+  });
+  list.sort((a, b) => Math.abs(b.percent) - Math.abs(a.percent));
+  return list.slice(0, 6);
+}
+
+function monthLockState(month) {
+  const today = todayKey(new Date());
+  const thisMonth = today.slice(0, 7);
+  if (month >= thisMonth) return 'open';
+  if (month === addMonths(thisMonth, -1) && Number(today.slice(8)) <= GRACE_DAYS) return 'grace';
+  return 'locked';
+}
+
+function isMonthLocked(month) {
+  return monthLockState(month) === 'locked';
+}
+
+function graceDaysLeft() {
+  return GRACE_DAYS - Number(todayKey(new Date()).slice(8)) + 1;
+}
+
+function earliestOpenDate() {
+  const thisMonth = todayKey(new Date()).slice(0, 7);
+  const previousMonth = addMonths(thisMonth, -1);
+  if (monthLockState(previousMonth) === 'grace') return previousMonth + '-01';
+  return thisMonth + '-01';
+}
+
+function monthTitle(month) {
+  return formatMonth(new Date(`${month}-01T12:00:00`));
+}
+
+function renderLockState() {
+  const banner = document.querySelector('#monthLockBanner');
+  const locked = isMonthLocked(selectedMonth);
+  const previousMonth = addMonths(todayKey(new Date()).slice(0, 7), -1);
+  banner.classList.remove('locked', 'grace');
+  banner.hidden = true;
+  if (locked) {
+    banner.textContent = '🔒 ' + t('monthLocked').replace('{month}', monthTitle(selectedMonth));
+    banner.classList.add('locked');
+    banner.hidden = false;
+  } else if (monthLockState(previousMonth) === 'grace') {
+    const daysLeft = graceDaysLeft();
+    let text = t('graceMany').replace('{n}', localDigits(daysLeft));
+    if (daysLeft === 2) text = t('graceTwo');
+    if (daysLeft === 1) text = t('graceLastDay');
+    banner.textContent = '⏳ ' + text.replace('{month}', monthTitle(previousMonth));
+    banner.classList.add('grace');
+    banner.hidden = false;
+  }
+  document.querySelector('#editBudget').hidden = locked;
+  document.querySelector('#addIncome').hidden = locked;
+}
+
+function archiveMonths() {
+  const thisMonth = todayKey(new Date()).slice(0, 7);
+  const months = [];
+  expenses.forEach(item => {
+    const month = item.date.slice(0, 7);
+    if (month < thisMonth && !months.includes(month)) months.push(month);
+  });
+  incomes.forEach(item => {
+    const month = item.date.slice(0, 7);
+    if (month < thisMonth && !months.includes(month)) months.push(month);
+  });
+  months.sort();
+  months.reverse();
+  return months.map(month => {
+    const monthList = monthExpenses(month);
+    let spent = 0;
+    const totals = {};
+    monthList.forEach(item => {
+      spent += item.amount;
+      totals[item.category] = (totals[item.category] || 0) + item.amount;
+    });
+    let income = 0;
+    incomes.forEach(item => {
+      if (item.date.startsWith(month)) income += item.amount;
+    });
+    let topCategory = '';
+    let topValue = 0;
+    Object.keys(totals).forEach(category => {
+      if (totals[category] > topValue) {
+        topValue = totals[category];
+        topCategory = category;
+      }
+    });
+    return { month: month, spent: spent, budget: budgetFor(month), income: income, count: monthList.length, topCategory: topCategory, state: monthLockState(month) };
+  });
+}
+
+function openArchive() {
+  updateArchive(archiveMonths());
+  document.querySelector('#archiveModalBackdrop').hidden = false;
+}
+
+function closeArchive() {
+  document.querySelector('#archiveModalBackdrop').hidden = true;
+}
+
+function showMonth(month) {
+  selectedMonth = month;
+  selectedWeekOffset = 0;
+  document.querySelector('#monthFilter').value = month;
+  closeArchive();
+  render();
+  window.scrollTo(0, 0);
+}
+
 function renderComparison() {
   const today = todayKey(new Date());
   const lastMonth = addMonths(selectedMonth, -1);
@@ -303,9 +496,11 @@ function render() {
   updateCategories(visibleExpenses);
   updateReports(currentExpenses);
   renderComparison();
-  updateIncome(incomes.filter(item => item.date.startsWith(selectedMonth)), currentExpenses);
+  updateIncome(incomes.filter(item => item.date.startsWith(selectedMonth)), currentExpenses, isMonthLocked(selectedMonth));
+  renderLockState();
   updateUpcoming(upcomingBills());
   updateCalendar(selectedMonth, expenses);
+  updatePriceChanges(priceChanges(selectedMonth));
   updateTransactions(visibleExpenses);
 }
 
@@ -317,6 +512,7 @@ function updateGreeting() {
 
 function refreshDateTime() {
   document.querySelector('#todayLabel').textContent = formatToday(new Date());
+  document.querySelector('#monthFilter').max = todayKey(new Date()).slice(0, 7);
   if (!document.querySelector('#monthFilter').value) document.querySelector('#monthFilter').value = selectedMonth;
 }
 
@@ -404,11 +600,14 @@ function openModal(expense = null) {
   } else {
     form.elements.date.value = todayKey(new Date());
   }
+  form.elements.date.min = earliestOpenDate();
+
   showCustomField(form.elements.category.value === CUSTOM_CATEGORY);
   selectedIcon = '';
   if (expense && !STANDARD_CATEGORIES.includes(expense.category)) selectedIcon = categoryIcons[expense.category] || '';
   renderIconPicker();
   updateDescriptionSuggestions();
+  updatePriceHint();
   // خيار التكرار للمصروف الجديد بس، لأن التعديل يغير مصروف واحد مو القاعدة كلها
   document.querySelector('#repeatField').hidden = Boolean(editingId);
   setKey('#expenseModalKicker', editingId ? 'editExpense' : 'newExpense');
@@ -437,6 +636,10 @@ function saveExpenseFromForm(form) {
 
   const amount = Number(form.elements.amount.value);
   const date = form.elements.date.value;
+  if (isMonthLocked(date.slice(0, 7))) {
+    showDialog(t('dateLocked'));
+    return false;
+  }
   let id = editingId || crypto.randomUUID();
   let createdAt = Date.now();
   if (editingId) {
@@ -532,6 +735,7 @@ async function finishCloudSignIn(session) {
   render();
   showInstallGuideOnce(session.user.id);
   maybeShowReminderBanner();
+  if (expenses.length || Object.keys(budgets).length) stopLoading();
   if (navigator.onLine) {
     // المتكرر ينضاف بعد السحب، عشان نشتغل على آخر نسخة من قائمة التكرار مو نسخة الجهاز القديمة
     await pullFromCloud(true);
@@ -539,6 +743,7 @@ async function finishCloudSignIn(session) {
     if (addDueRecurring()) render();
     setCloudStatus('offlineSaved');
   }
+  stopLoading();
 }
 
 async function signOutUser() {
@@ -546,7 +751,7 @@ async function signOutUser() {
   // نتأكد إن كل التعديلات وصلت السحابة قبل ما نمسح نسخة الجهاز، عشان ما يضيع شي
   const saved = await pushChanges();
   if (!saved) {
-    alert(t('signOutFailed'));
+    showDialog(t('signOutFailed'));
     return;
   }
   await removeReminderForDevice();
@@ -640,7 +845,7 @@ function openInstallGuide() {
     steps = [[DESKTOP_ICON, 'desktopStep1'], ['Install', 'desktopStep2']];
     introKey = 'installIntroDesktop';
   }
-  document.querySelector('#installSteps').innerHTML = steps.map((step, index) => `<div class="install-step"><span class="install-number">${index + 1}</span><span class="install-icon">${step[0]}</span><span>${t(step[1])}</span></div>`).join('');
+  document.querySelector('#installSteps').innerHTML = steps.map((step, index) => `<div class="install-step"><span class="install-number">${localDigits(index + 1)}</span><span class="install-icon">${step[0]}</span><span>${t(step[1])}</span></div>`).join('');
   setKey('#installIntro', introKey);
   // أندرويد كروم يقدر يثبت بضغطة وحدة، فنظهر الزر بس لما المتصفح يسمح
   document.querySelector('#installNowButton').hidden = !deferredInstallPrompt;
@@ -671,7 +876,6 @@ document.querySelector('#installNowButton').addEventListener('click', async () =
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
   closeInstallGuide();
-  closeIncomeModal();
 });
 document.querySelector('#installLater').addEventListener('click', closeInstallGuide);
 document.querySelector('#closeInstall').addEventListener('click', closeInstallGuide);
@@ -813,16 +1017,33 @@ document.querySelector('#transactionList').addEventListener('click', event => {
   }
   const item = expenses.find(expense => expense.id === button.dataset.id);
   if (!item) return;
+  if (isMonthLocked(item.date.slice(0, 7))) return;
   if (button.dataset.action === 'edit') openModal(item);
   if (button.dataset.action === 'delete') deleteExpense(item.id);
 });
 
 document.querySelector('#undoButton').addEventListener('click', undoDelete);
 
+document.querySelector('#dialogOk').addEventListener('click', () => closeDialog(true));
+document.querySelector('#dialogCancel').addEventListener('click', () => closeDialog(false));
+document.querySelector('#dialogBackdrop').addEventListener('click', event => { if (event.target.id === 'dialogBackdrop') closeDialog(false); });
+
+document.querySelector('#archiveButton').addEventListener('click', () => {
+  closeMobileMenu();
+  openArchive();
+});
+document.querySelector('#closeArchive').addEventListener('click', closeArchive);
+document.querySelector('#archiveModalBackdrop').addEventListener('click', event => { if (event.target.id === 'archiveModalBackdrop') closeArchive(); });
+document.querySelector('#archiveList').addEventListener('click', event => {
+  const card = event.target.closest('[data-month]');
+  if (card) showMonth(card.dataset.month);
+});
+
 function openIncomeModal() {
   const form = document.querySelector('#incomeForm');
   form.reset();
   form.elements.date.value = todayKey(new Date());
+  form.elements.date.min = earliestOpenDate();
   const sources = [t('salary'), t('freelance'), t('otherIncome')];
   incomes.forEach(item => {
     if (!sources.includes(item.source)) sources.push(item.source);
@@ -860,6 +1081,10 @@ document.querySelector('#incomeForm').addEventListener('submit', event => {
   const source = form.elements.source.value.trim();
   const amount = Number(form.elements.amount.value);
   if (!source || !(amount > 0)) return;
+  if (isMonthLocked(form.elements.date.value.slice(0, 7))) {
+    showDialog(t('dateLocked'));
+    return;
+  }
   incomes.push({ id: crypto.randomUUID(), amount: amount, source: source, date: form.elements.date.value });
   saveIncomes(incomes);
   markProfileChanged();
@@ -868,10 +1093,13 @@ document.querySelector('#incomeForm').addEventListener('submit', event => {
   render();
 });
 
-document.querySelector('#incomeList').addEventListener('click', event => {
+document.querySelector('#incomeList').addEventListener('click', async event => {
   const button = event.target.closest('[data-income-id]');
   if (!button) return;
-  if (!confirm(t('confirmDeleteIncome'))) return;
+  const income = incomes.find(item => item.id === button.dataset.incomeId);
+  if (!income || isMonthLocked(income.date.slice(0, 7))) return;
+  const sure = await showDialog(t('confirmDeleteIncome'), t('delete'));
+  if (!sure) return;
   incomes = incomes.filter(item => item.id !== button.dataset.incomeId);
   saveIncomes(incomes);
   markProfileChanged();
@@ -894,7 +1122,11 @@ document.querySelector('#customCategoryInput').addEventListener('change', event 
   }
 });
 
-document.querySelector('#expenseForm').elements.description.addEventListener('change', fillFromPastExpense);
+document.querySelector('#expenseForm').elements.description.addEventListener('change', () => {
+  fillFromPastExpense();
+  updatePriceHint();
+});
+document.querySelector('#expenseForm').elements.amount.addEventListener('input', updatePriceHint);
 
 document.querySelector('#recurringList').addEventListener('click', event => {
   const button = event.target.closest('[data-rule-id]');
@@ -909,6 +1141,7 @@ document.querySelector('#budgetForm').addEventListener('submit', event => {
   const next = Number(document.querySelector('#budgetInput').value);
   if (next <= 0) return;
   // الميزانية تنحفظ للشهر المعروض بس، فالشهور اللي قبله ما تتغير
+  if (isMonthLocked(selectedMonth)) return;
   budgets[selectedMonth] = next;
   saveBudgets(budgets);
   markProfileChanged();
@@ -926,6 +1159,8 @@ document.querySelector('#closeSettings').addEventListener('click', closeSettings
 document.querySelector('#settingsModalBackdrop').addEventListener('click', event => { if (event.target.id === 'settingsModalBackdrop') closeSettings(); });
 document.querySelector('#languageInput').addEventListener('change', event => {
   saveLanguage(event.target.value);
+  markProfileChanged();
+  pushChanges();
   applyLanguage();
   updateRecurringList(recurring);
   render();
@@ -1015,11 +1250,17 @@ document.querySelector('#nextWeek').addEventListener('click', () => {
 // زر Esc يقفل أي نافذة مفتوحة، أريح على الكمبيوتر
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
+  if (!document.querySelector('#dialogBackdrop').hidden) {
+    closeDialog(false);
+    return;
+  }
   closeModal();
   closeBudgetModal();
   closeSettings();
   closeAuthModal();
   closeInstallGuide();
+  closeIncomeModal();
+  closeArchive();
   closeMobileMenu();
 });
 
@@ -1036,6 +1277,64 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('online', () => pullFromCloud());
+
+const PULL_LIMIT = 70;
+let pullStartY = 0;
+let pullDistance = 0;
+let pullTracking = false;
+
+function setPullIndicator(key, distance) {
+  const indicator = document.querySelector('#pullIndicator');
+  indicator.textContent = t(key);
+  indicator.style.transform = `translate(-50%, ${Math.min(distance, PULL_LIMIT)}px)`;
+  indicator.hidden = false;
+}
+
+function hidePullIndicator() {
+  const indicator = document.querySelector('#pullIndicator');
+  indicator.hidden = true;
+  indicator.style.transform = '';
+}
+
+async function refreshNow() {
+  refreshDateTime();
+  if (!currentSession) return;
+  lastPullTime = 0;
+  await pullFromCloud();
+}
+
+document.addEventListener('touchstart', event => {
+  pullTracking = false;
+  if (window.scrollY > 0) return;
+  if (document.body.classList.contains('app-locked')) return;
+  if (document.querySelector('.modal-backdrop:not([hidden])')) return;
+  if (document.querySelector('.sidebar.menu-open')) return;
+  pullTracking = true;
+  pullStartY = event.touches[0].clientY;
+  pullDistance = 0;
+}, { passive: true });
+
+document.addEventListener('touchmove', event => {
+  if (!pullTracking) return;
+  pullDistance = (event.touches[0].clientY - pullStartY) / 2;
+  if (pullDistance <= 5) {
+    hidePullIndicator();
+    return;
+  }
+  setPullIndicator(pullDistance >= PULL_LIMIT ? 'releaseToRefresh' : 'pullToRefresh', pullDistance);
+}, { passive: true });
+
+document.addEventListener('touchend', async () => {
+  if (!pullTracking) return;
+  pullTracking = false;
+  if (pullDistance < PULL_LIMIT) {
+    hidePullIndicator();
+    return;
+  }
+  setPullIndicator('refreshing', PULL_LIMIT);
+  await refreshNow();
+  hidePullIndicator();
+});
 window.addEventListener('offline', () => { if (currentSession) setCloudStatus('offlineSaved'); });
 
 // ---------- التشغيل ----------
@@ -1044,6 +1343,8 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(error => console.error('Service worker failed', error));
 }
 
+setLockChecker(isMonthLocked);
+setTimeout(stopLoading, 8000);
 moveLegacyBudget(loadLegacyBudget());
 checkTranslations();
 applyLanguage();

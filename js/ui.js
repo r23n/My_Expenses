@@ -3,11 +3,13 @@ import { categoryLabel, currencyLabel, getLanguage, t } from './i18n.js';
 
 const locale = () => getLanguage() === 'en' ? 'en-BH' : 'ar-BH';
 const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-const numberFormat = value => {
-  const text = new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+export function localDigits(value) {
+  const text = String(value);
   if (getLanguage() === 'en') return text;
   return text.replace(/[0-9]/g, digit => ARABIC_DIGITS[Number(digit)]);
-};
+}
+
+const numberFormat = value => localDigits(new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value));
 
 export const money = value => `${numberFormat(value)} ${currencyLabel()}`;
 export const compactMoney = value => numberFormat(value);
@@ -47,7 +49,7 @@ export function updateSummary(expenses, budget, daysLeft = 0) {
   const progress = document.querySelector('#budgetProgress');
   document.querySelector('#totalSpent').textContent = money(total);
   document.querySelector('#remainingBudget').textContent = money(Math.max(remaining, 0));
-  document.querySelector('#spentCaption').textContent = total ? `${expenses.length} ${t('transactionsCount')}` : t('firstExpense');
+  document.querySelector('#spentCaption').textContent = total ? `${localDigits(expenses.length)} ${t('transactionsCount')}` : t('firstExpense');
   document.querySelector('#budgetLabel').textContent = money(budget);
   progress.style.width = budget > 0 ? `${Math.min(percent, 100)}%` : '0%';
   // الشريط يتلون حسب قربك من نهاية الميزانية: أصفر من ٨٠٪ وأحمر عند التجاوز
@@ -73,6 +75,11 @@ export function updateSummary(expenses, budget, daysLeft = 0) {
 }
 
 let customColorMap = {};
+let lockChecker = () => false;
+
+export function setLockChecker(checker) {
+  lockChecker = checker;
+}
 let customIcons = {};
 
 export function setCategoryIcons(icons) {
@@ -140,7 +147,7 @@ export function updateCategories(expenses) {
   document.querySelector('#donutCenter').textContent = compactMoney(total);
   // تصنيف واحد بصيغة المفرد والباقي بالجمع عشان ما يطلع "1 categories"
   const countWord = sorted.length === 1 ? t('categoryOne') : t('categoryMany');
-  document.querySelector('#donutTotal').textContent = `${sorted.length} ${countWord}`;
+  document.querySelector('#donutTotal').textContent = `${localDigits(sorted.length)} ${countWord}`;
   let progress = 0;
   const stops = sorted.length ? sorted.map(([category, value]) => { const start = progress; progress += value / total * 100; return `${categoryColor(category)} ${start}% ${progress}%`; }).join(',') : '#dce7e3 0 100%';
   document.querySelector('#donutChart').style.background = `conic-gradient(${stops})`;
@@ -165,7 +172,9 @@ export function updateReports(expenses) {
 
 function transactionRow(item) {
   const color = categoryColor(item.category);
-  return `<div class="transaction-row"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(item.category)}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong><button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${t('edit')} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.description)}">×</button></div>`;
+    let actions = `<button class="transaction-edit" data-action="edit" data-id="${item.id}" type="button" aria-label="${t('edit')} ${escapeHtml(item.description)}">✎</button><button class="transaction-delete" data-action="delete" data-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.description)}">×</button>`;
+  if (lockChecker(item.date.slice(0, 7))) actions = `<span class="transaction-lock" title="${t('lockedShort')}">🔒</span>`;
+  return `<div class="transaction-row"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(item.category)}</div><div class="transaction-main"><strong>${escapeHtml(item.description)}</strong><span>${escapeHtml(categoryLabel(item.category))} · ${dateLabel(item.date)}</span></div><strong class="transaction-amount">− ${money(item.amount)}</strong>${actions}</div>`;
 }
 
 function groupRow(items) {
@@ -173,7 +182,7 @@ function groupRow(items) {
   const color = categoryColor(first.category);
   let total = 0;
   items.forEach(item => { total += item.amount; });
-  return `<div class="transaction-group"><div class="transaction-row group-row" data-action="toggle"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(first.category)}</div><div class="transaction-main"><strong>${escapeHtml(first.description)} <span class="group-count">×${items.length}</span></strong><span>${escapeHtml(categoryLabel(first.category))} · ${dateLabel(first.date)}</span></div><strong class="transaction-amount">− ${money(total)}</strong><span class="group-arrow">▾</span></div><div class="group-items" hidden>${items.map(transactionRow).join('')}</div></div>`;
+  return `<div class="transaction-group"><div class="transaction-row group-row" data-action="toggle"><div class="transaction-icon" style="background:${color}22;color:${color}">${categoryIcon(first.category)}</div><div class="transaction-main"><strong>${escapeHtml(first.description)} <span class="group-count">×${localDigits(items.length)}</span></strong><span>${escapeHtml(categoryLabel(first.category))} · ${dateLabel(first.date)}</span></div><strong class="transaction-amount">− ${money(total)}</strong><span class="group-arrow">▾</span></div><div class="group-items" hidden>${items.map(transactionRow).join('')}</div></div>`;
 }
 
 export function updateTransactions(expenses) {
@@ -223,7 +232,7 @@ export function updateComparison(thisPeriod, lastPeriod, isSamePeriod) {
     return;
   }
   const percent = Math.round((thisTotal - lastTotal) / lastTotal * 100);
-  valueElement.textContent = `${percent > 0 ? '+' : ''}${percent}%`;
+  valueElement.textContent = `${percent > 0 ? '+' : ''}${localDigits(percent)}%`;
   if (percent > 0) valueElement.classList.add('up');
   if (percent < 0) valueElement.classList.add('down');
   const periodWord = isSamePeriod ? t('samePeriodLastMonth') : t('lastMonthTotal');
@@ -249,7 +258,7 @@ export function updateRecurringList(rules) {
     list.innerHTML = `<p class="recurring-empty">${t('recurringEmpty')}</p>`;
     return;
   }
-  list.innerHTML = rules.map(rule => `<div class="recurring-row"><div><strong>${escapeHtml(rule.description)}</strong><span>${escapeHtml(categoryLabel(rule.category))} · ${t('dayOfMonth')} ${rule.day}</span></div><strong>${money(rule.amount)}</strong><button class="transaction-delete" data-rule-id="${rule.id}" type="button" aria-label="${t('stopRecurring')} ${escapeHtml(rule.description)}" title="${t('stopRecurring')}">×</button></div>`).join('');
+  list.innerHTML = rules.map(rule => `<div class="recurring-row"><div><strong>${escapeHtml(rule.description)}</strong><span>${escapeHtml(categoryLabel(rule.category))} · ${t('dayOfMonth')} ${localDigits(rule.day)}</span></div><strong>${money(rule.amount)}</strong><button class="transaction-delete" data-rule-id="${rule.id}" type="button" aria-label="${t('stopRecurring')} ${escapeHtml(rule.description)}" title="${t('stopRecurring')}">×</button></div>`).join('');
 }
 
 
@@ -261,7 +270,7 @@ export function updateUpcoming(items) {
     return;
   }
   const rows = items.map(item => {
-    let dueText = t('dueInMany').replace('{n}', item.days);
+    let dueText = t('dueInMany').replace('{n}', localDigits(item.days));
     if (item.days === 1) dueText = t('dueIn1');
     if (item.days === 2) dueText = t('dueIn2');
     return `<div class="upcoming-row"><span class="upcoming-bell">⏰</span><div><strong>${escapeHtml(item.rule.description)}</strong><span>${dueText}</span></div><b>${money(item.rule.amount)}</b></div>`;
@@ -303,12 +312,12 @@ export function updateCalendar(month, expenses) {
     if (total > 0) level = Math.max(1, Math.ceil(total / max * 4));
     const todayClass = key === today ? ' today' : '';
     const amount = total > 0 ? compactMoney(total) : '';
-    cells += `<div class="calendar-day level-${level}${todayClass}" title="${dateLabel(key)}: ${money(total)}"><span>${day}</span><small>${amount}</small></div>`;
+    cells += `<div class="calendar-day level-${level}${todayClass}" title="${dateLabel(key)}: ${money(total)}"><span>${localDigits(day)}</span><small>${amount}</small></div>`;
   }
   document.querySelector('#calendarGrid').innerHTML = cells;
 }
 
-export function updateIncome(incomeList, expenseList) {
+export function updateIncome(incomeList, expenseList, locked = false) {
   let incomeTotal = 0;
   incomeList.forEach(item => { incomeTotal += item.amount; });
   let spentTotal = 0;
@@ -330,8 +339,40 @@ export function updateIncome(incomeList, expenseList) {
   } else {
     const percent = Math.round(saved / incomeTotal * 100);
     bar.style.width = `${percent}%`;
-    rate.textContent = `${percent}% ${t('savingsRateOf')}`;
+    rate.textContent = `${localDigits(percent)}% ${t('savingsRateOf')}`;
   }
   const sorted = [...incomeList].sort((a, b) => b.date.localeCompare(a.date));
-  document.querySelector('#incomeList').innerHTML = sorted.map(item => `<div class="income-row"><div><strong>${escapeHtml(item.source)}</strong><span>${dateLabel(item.date)}</span></div><b>+ ${money(item.amount)}</b><button class="transaction-delete" data-income-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.source)}">×</button></div>`).join('');
+  document.querySelector('#incomeList').innerHTML = sorted.map(item => `<div class="income-row"><div><strong>${escapeHtml(item.source)}</strong><span>${dateLabel(item.date)}</span></div><b>+ ${money(item.amount)}</b>${locked ? '' : `<button class="transaction-delete" data-income-id="${item.id}" type="button" aria-label="${t('delete')} ${escapeHtml(item.source)}">×</button>`}</div>`).join('');
+}
+
+export function updateArchive(items) {
+  const list = document.querySelector('#archiveList');
+  if (!items.length) {
+    list.innerHTML = `<p class="recurring-empty">${t('archiveEmpty')}</p>`;
+    return;
+  }
+  list.innerHTML = items.map(item => {
+    const title = formatMonth(new Date(`${item.month}-01T12:00:00`));
+    const icon = item.state === 'locked' ? '🔒' : '⏳';
+    let saved = '—';
+    if (item.income > 0) saved = money(item.income - item.spent);
+    let top = '';
+    if (item.topCategory) top = ` · ${t('topCategory')}: ${escapeHtml(categoryLabel(item.topCategory))}`;
+    return `<button class="archive-card" data-month="${item.month}" type="button"><div class="archive-head"><strong>${title}</strong><span>${icon}</span></div><div class="archive-stats"><span>${t('spentLabel')}<b>${money(item.spent)}</b></span><span>${t('monthlyBudget')}<b>${money(item.budget)}</b></span><span>${t('incomeTotalLabel')}<b>${money(item.income)}</b></span><span>${t('savedLabel')}<b>${saved}</b></span></div><p>${localDigits(item.count)} ${t('expensesCountLabel')}${top}</p></button>`;
+  }).join('');
+}
+
+export function updatePriceChanges(items) {
+  const panel = document.querySelector('#pricePanel');
+  if (!items.length) {
+    panel.hidden = true;
+    return;
+  }
+  document.querySelector('#priceList').innerHTML = items.map(item => {
+    const arrow = item.percent > 0 ? '⬆️' : '⬇️';
+    const sign = item.percent > 0 ? '+' : '';
+    const direction = item.percent > 0 ? 'up' : 'down';
+    return `<div class="price-row"><span class="price-icon">${categoryIcon(item.category)}</span><strong>${escapeHtml(item.description)}</strong><span class="price-from">${compactMoney(item.from)} <span class="flip-ltr">←</span> ${compactMoney(item.to)}</span><b class="price-change ${direction}">${arrow} ${sign}${localDigits(item.percent)}%</b></div>`;
+  }).join('');
+  panel.hidden = false;
 }

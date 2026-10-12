@@ -10,27 +10,28 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="description" content="مصاريفي، نظام واضح لمتابعة مصاريفك اليومية" />
   <title>مصاريفي | مصاريفي اليومية</title>
-  <link rel="icon" href="../assets/logo.svg?v=5" type="image/svg+xml" />
+  <link rel="icon" href="../assets/logo.svg?v=6" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="../assets/icon-180.png" />
   <link rel="manifest" href="../manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- رقم النسخة يتغير مع كل تحديث كبير عشان الجوال ينزل الملفات الجديدة بدل القديمة المحفوظة -->
-  <link rel="stylesheet" href="../css/reset.css?v=5" />
-  <link rel="stylesheet" href="../css/layout.css?v=5" />
-  <link rel="stylesheet" href="../css/components.css?v=5" />
+  <link rel="stylesheet" href="../css/reset.css?v=6" />
+  <link rel="stylesheet" href="../css/layout.css?v=6" />
+  <link rel="stylesheet" href="../css/components.css?v=6" />
 </head>
 <!-- أي عنصر عليه data-i18n تترجمه الدالة applyTranslations تلقائيًا، والنص العربي هنا يظهر بس لحظة التحميل -->
-<body class="app-locked">
+<body class="app-locked loading">
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=5" alt="" /><div><strong data-i18n="appName">مصاريفي</strong><span data-i18n="brandTagline">مصاريفك بوضوح</span></div></div>
+      <div class="brand"><img class="brand-logo" src="../assets/logo.svg?v=6" alt="" /><div><strong data-i18n="appName">مصاريفي</strong><span data-i18n="brandTagline">مصاريفك بوضوح</span></div></div>
       <nav class="side-nav" data-i18n-aria="mainNav" aria-label="التنقل الرئيسي">
         <a class="nav-item active" href="#dashboard"><span>⌂</span><span data-i18n="overview">نظرة عامة</span></a>
         <a class="nav-item" href="#insights"><span>▥</span><span data-i18n="insights">التحليلات</span></a>
         <a class="nav-item" href="#transactions"><span>↙</span><span data-i18n="expenses">المصروفات</span></a>
       </nav>
+      <button class="sidebar-settings" id="archiveButton" type="button"><span class="sidebar-settings-icon">🗂</span><span data-i18n="archive">سجل الشهور</span></button>
       <button class="sidebar-settings" id="settingsButton" type="button"><span class="sidebar-settings-icon">⚙</span><span data-i18n="settings">الإعدادات</span></button>
       <div class="cloud-status" id="cloudStatus">محفوظ على هذا الجهاز</div>
       <button class="sidebar-account" id="authButton" type="button" data-i18n="signInSync">تسجيل الدخول للمزامنة</button>
@@ -45,6 +46,7 @@
         <button class="primary-button" id="openModal" type="button"><span>＋</span> <span data-i18n="addExpense">إضافة مصروف</span></button>
       </header>
 
+      <div class="month-lock-banner" id="monthLockBanner" role="status" hidden></div>
       <section class="month-strip" data-i18n-aria="currentMonth" aria-label="الشهر الحالي">
         <div><span class="strip-label" data-i18n="tracking">تتابع الآن</span><strong id="monthName"></strong></div>
         <div class="month-progress"><div class="progress-copy"><span data-i18n="monthlyBudget">ميزانية الشهر</span><strong id="budgetLabel"></strong></div><div class="progress-track"><div class="progress-value" id="budgetProgress"></div></div></div>
@@ -92,6 +94,10 @@
         <div class="calendar-grid" id="calendarGrid"></div>
         <div class="calendar-legend"><span data-i18n="less">أقل</span><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span data-i18n="more">أكثر</span></div>
       </section>
+      <section class="panel price-panel" id="pricePanel" hidden>
+        <div class="panel-heading"><div><span class="section-kicker" data-i18n="priceKicker">تغيّر الأسعار</span><h2 data-i18n="priceTitle">أسعار تغيّرت هالشهر</h2></div></div>
+        <div class="price-list" id="priceList"></div>
+      </section>
       <section class="report-grid" data-i18n-aria="monthlyReport" aria-label="تقرير الشهر">
         <article class="report-card"><span class="section-kicker" data-i18n="monthlyReport">تقرير الشهر</span><h2 data-i18n="topCategory">أعلى تصنيف صرف</h2><strong id="topCategory"></strong><p id="topCategoryAmount"></p></article>
         <article class="report-card"><span class="section-kicker" data-i18n="monthlyReport">تقرير الشهر</span><h2 data-i18n="topDay">أعلى يوم صرف</h2><strong id="topSpendingDay"></strong><p id="topSpendingDayAmount"></p></article>
@@ -120,7 +126,7 @@
     </main>
   </div>
 
-  <div class="auth-gate" id="authGate"><section class="auth-gate-card"><img class="auth-gate-logo" src="../assets/logo.svg?v=5" alt="" /><span class="section-kicker" data-i18n="appName">مصاريفي</span><h2 data-i18n="gateTitle">سجّل دخولك للمتابعة</h2><p data-i18n="gateMessage">يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.</p><button class="primary-button full-width" id="gateAuthButton" type="button" data-i18n="signIn">تسجيل الدخول</button></section></div>
+  <div class="auth-gate" id="authGate"><section class="auth-gate-card"><img class="auth-gate-logo" src="../assets/logo.svg?v=6" alt="" /><span class="section-kicker" data-i18n="appName">مصاريفي</span><h2 data-i18n="gateTitle">سجّل دخولك للمتابعة</h2><p data-i18n="gateMessage">يجب تسجيل الدخول لاستخدام النظام وحفظ مصاريفك بأمان.</p><button class="primary-button full-width" id="gateAuthButton" type="button" data-i18n="signIn">تسجيل الدخول</button></section></div>
 
   <div class="modal-backdrop" id="modalBackdrop" hidden>
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -130,6 +136,7 @@
       <p class="modal-intro" data-i18n="controlNote">أنت تتحكم بالمبلغ والتصنيف والتاريخ.</p>
       <form id="expenseForm">
         <label><span data-i18n="amount">المبلغ</span><div class="amount-input"><input name="amount" type="number" min="0.001" step="0.001" placeholder="0.000" required /><span data-i18n="currency">د.ب</span></div></label>
+        <p class="price-hint" id="priceHint" hidden></p>
         <label><span data-i18n="expenseType">نوع الصرف</span>
           <select name="category" id="categoryInput" required>
             <option value="طعام" data-i18n="catFood">طعام</option>
@@ -222,7 +229,23 @@
     </section>
   </div>
 
-    <div class="toast" id="undoToast" role="status" hidden><span data-i18n="expenseDeleted">انحذف المصروف</span><button id="undoButton" type="button" data-i18n="undo">تراجع</button></div>
-  <script type="module" src="../js/app.js?v=5"></script>
+  <div class="modal-backdrop" id="archiveModalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="archiveTitle">
+      <button class="close-button" id="closeArchive" type="button" data-i18n-aria="close" aria-label="إغلاق">×</button>
+      <span class="section-kicker" data-i18n="monthlyReport">تقرير الشهر</span>
+      <h2 id="archiveTitle" data-i18n="archive">سجل الشهور</h2>
+      <p class="modal-intro" data-i18n="archiveNote">الشهور المقفلة للعرض فقط. اضغط على أي شهر عشان تشوف تفاصيله.</p>
+      <div class="archive-list" id="archiveList"></div>
+    </section>
+  </div>
+  <div class="modal-backdrop dialog-backdrop" id="dialogBackdrop" hidden>
+    <section class="modal dialog-box" role="alertdialog" aria-modal="true" aria-labelledby="dialogMessage">
+      <p class="dialog-message" id="dialogMessage"></p>
+      <div class="dialog-actions"><button class="secondary-button" id="dialogCancel" type="button" data-i18n="cancel">إلغاء</button><button class="primary-button" id="dialogOk" type="button" data-i18n="ok">حسنًا</button></div>
+    </section>
+  </div>
+  <div class="pull-indicator" id="pullIndicator" hidden></div>
+  <div class="toast" id="undoToast" role="status" hidden><span data-i18n="expenseDeleted">انحذف المصروف</span><button id="undoButton" type="button" data-i18n="undo">تراجع</button></div>
+  <script type="module" src="../js/app.js?v=6"></script>
 </body>
 </html>

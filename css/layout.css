@@ -69,3 +69,8 @@
   .content-grid { gap: 10px; }
   .panel { padding: 15px; }
 }
+#editBudget { white-space: nowrap; }
+@media (max-width: 1100px) {
+  .month-strip { grid-template-columns: 1fr auto; gap: 12px; }
+  .month-progress { grid-column: 1 / -1; grid-row: 2; }
+}
